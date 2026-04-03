@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나래반 – {{ num }}번</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --sky: #4FC3F7; --navy: #0D47A1; --yellow: #FFD600;
+    --green: #43A047; --red: #E53935; --bg: #E3F2FD;
+  }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); min-height: 100vh; }
+
+  .topbar {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 20px; letter-spacing: 1px; }
+  .topbar .info { font-size: 13px; opacity: .8; }
+  .logout { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR'; }
+  .logout:hover { background: rgba(255,255,255,.3); }
+
+  .main { max-width: 700px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(13,71,161,.08);
+  }
+  .section-title {
+    font-family: 'Black Han Sans';
+    font-size: 17px;
+    color: var(--navy);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 출석 */
+  .att-btn {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Black Han Sans';
+    font-size: 20px;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: 1px;
+  }
+  .att-btn.ready { background: var(--green); color: #fff; }
+  .att-btn.ready:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(67,160,71,.35); }
+  .att-btn.done { background: #e8f5e9; color: var(--green); border: 2px solid #a5d6a7; cursor: default; }
+  .att-msg { margin-top: 10px; text-align: center; font-size: 14px; color: #666; }
+
+  /* 공지 */
+  .notice-item {
+    border-left: 4px solid var(--sky);
+    padding: 10px 14px;
+    background: #f0f8ff;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .notice-date { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .empty { color: #bbb; font-size: 14px; text-align: center; padding: 12px; }
+
+  /* 파일 */
+  .file-list { list-style: none; }
+  .file-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #f8f9ff;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .file-list li .fname { flex: 1; word-break: break-all; color: var(--navy); }
+  .dl-btn {
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: 'Noto Sans KR';
+    white-space: nowrap;
+    margin-left: 10px;
+  }
+  .dl-btn:hover { background: #1565C0; }
+
+  /* 파일 업로드 */
+  .upload-area {
+    border: 2.5px dashed #90caf9;
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: #f0f8ff;
+  }
+  .upload-area:hover { border-color: var(--sky); background: #e1f5fe; }
+  .upload-area input[type=file] { display: none; }
+  .upload-area .icon { font-size: 36px; }
+  .upload-area p { font-size: 14px; color: #5c6bc0; margin-top: 8px; }
+  .upload-btn {
+    margin-top: 12px;
+    background: var(--sky);
+    color: var(--navy);
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-family: 'Black Han Sans';
+    font-size: 16px;
+    cursor: pointer;
+    display: none;
+  }
+  .upload-btn:hover { background: #29B6F6; }
+  .upload-result { margin-top: 10px; font-size: 14px; text-align: center; }
+
+  /* 퀴즈 */
+  .quiz-card {
+    border: 2px solid #e3f2fd;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .quiz-title { font-weight: 700; color: var(--navy); margin-bottom: 12px; font-size: 15px; }
+  .question { margin-bottom: 14px; }
+  .question p { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .question input[type=text] {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+    font-family: 'Noto Sans KR'; font-size: 14px; outline: none;
+  }
+  .question input[type=text]:focus { border-color: var(--sky); }
+  .choices label {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 8px;
+    background: #f5f5f5; margin-bottom: 6px;
+    font-size: 14px; cursor: pointer; font-weight: 400; color: #333;
+  }
+  .choices label:hover { background: #e3f2fd; }
+  .quiz-submit {
+    background: var(--yellow);
+    color: var(--navy);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-family: 'Black Han Sans';
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .quiz-submit:hover { filter: brightness(1.08); }
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #323232; color: #fff; padding: 12px 24px; border-radius: 24px;
+    font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>🌟 나래반 – {{ num }}번</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="info">{{ today }}</span>
+    <a href="/logout"><button class="logout">나가기</button></a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- 출석 체크 -->
+  <div class="section">
+    <div class="section-title">✋ 출석 체크</div>
+    {% if already_checked %}
+    <button class="att-btn done">출석 완료!</button>
+    <p class="att-msg">오늘 출석이 확인되었어요.</p>
+    {% else %}
+    <button class="att-btn ready" onclick="checkAttendance()">출석 체크하기</button>
+    <p class="att-msg" id="att-msg"></p>
+    {% endif %}
+  </div>
+
+  <!-- 공지사항 -->
+  <div class="section">
+    <div class="section-title">📢 선생님 공지</div>
+    {% if notices %}
+      {% for n in notices %}
+      <div class="notice-item">
+        {{ n.content }}
+        <div class="notice-date">{{ n.date }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty">공지사항이 없어요.</p>
+    {% endif %}
+  </div>
+
+  <!-- 선생님 배포 파일 -->
+  <div class="section">
+    <div class="section-title">📥 선생님이 나눠준 파일</div>
+    {% if shared_files %}
+    <ul class="file-list">
+      {% for f in shared_files %}
+      <li>
+        <span class="fname">📄 {{ f }}</span>
+        <a class="dl-btn" href="/download/{{ f }}">다운로드</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="empty">배포된 파일이 없어요.</p>
+    {% endif %}
+  </div>
+
+  <!-- 과제 제출 -->
+  <div class="section">
+    <div class="section-title">📤 과제 제출</div>
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" onchange="fileSelected(this)">
+      <div class="icon">📎</div>
+      <p>여기를 눌러서 파일 선택</p>
+      <p style="font-size:12px;color:#aaa;margin-top:4px;">PDF, HWP, 이미지, 동영상 등</p>
+    </div>
+    <div id="selected-file" style="display:none;margin-top:10px;font-size:13px;color:#555;text-align:center;"></div>
+    <button class="upload-btn" id="upload-btn" onclick="uploadFile()">제출하기</button>
+    <div class="upload-result" id="upload-result"></div>
+  </div>
+
+  <!-- 퀴즈/설문 -->
+  {% if active_quizzes %}
+  <div class="section">
+    <div class="section-title">📝 퀴즈 / 설문</div>
+    {% for quiz in active_quizzes %}
+    <div class="quiz-card" id="quiz-{{ quiz.id }}">
+      <div class="quiz-title">{{ quiz.title }}</div>
+      {% for i, q in quiz.questions | enumerate %}
+      <div class="question">
+        <p>Q{{ i+1 }}. {{ q.text }}</p>
+        {% if q.type == 'choice' %}
+        <div class="choices">
+          {% for c in q.choices %}
+          <label>
+            <input type="radio" name="q{{ quiz.id }}_{{ i }}" value="{{ c }}"> {{ c }}
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <input type="text" id="ans-{{ quiz.id }}-{{ i }}" placeholder="답을 입력해주세요">
+        {% endif %}
+      </div>
+      {% endfor %}
+      <button class="quiz-submit" onclick="submitQuiz('{{ quiz.id }}', {{ quiz.questions|length }})">제출하기</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = ok ? '#1b5e20' : '#b71c1c';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function checkAttendance() {
+  const res = await fetch('/attendance/check', {method:'POST'});
+  const data = await res.json();
+  showToast(data.msg, data.ok);
+  if (data.ok) {
+    document.querySelector('.att-btn').className = 'att-btn done';
+    document.querySelector('.att-btn').textContent = '출석 완료!';
+    document.getElementById('att-msg').textContent = '오늘 출석이 확인되었어요.';
+  }
+}
+
+function fileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('selected-file').style.display = 'block';
+  document.getElementById('selected-file').textContent = '선택된 파일: ' + file.name;
+  document.getElementById('upload-btn').style.display = 'block';
+}
+
+async function uploadFile() {
+  const input = document.getElementById('file-input');
+  if (!input.files[0]) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  document.getElementById('upload-btn').textContent = '제출 중...';
+  const res = await fetch('/upload', {method:'POST', body:fd});
+  const data = await res.json();
+  showToast(data.msg, data.ok);
+  document.getElementById('upload-result').textContent = data.msg;
+  document.getElementById('upload-result').style.color = data.ok ? '#2e7d32' : '#c62828';
+  if (data.ok) {
+    input.value = '';
+    document.getElementById('selected-file').style.display = 'none';
+    document.getElementById('upload-btn').style.display = 'none';
+  }
+  document.getElementById('upload-btn').textContent = '제출하기';
+}
+
+async function submitQuiz(qid, qcount) {
+  const answers = {};
+  for (let i = 0; i < qcount; i++) {
+    const radio = document.querySelector(`input[name="q${qid}_${i}"]:checked`);
+    const text  = document.getElementById(`ans-${qid}-${i}`);
+    if (radio) answers[i] = radio.value;
+    else if (text) answers[i] = text.value.trim();
+  }
+  const res = await fetch(`/quiz/${qid}/submit`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({answers})
+  });
+  const data = await res.json();
+  showToast(data.msg, data.ok);
+  if (data.ok) {
+    const card = document.getElementById(`quiz-${qid}`);
+    card.innerHTML = `<div style="text-align:center;padding:20px;color:#2e7d32;font-weight:700;font-size:16px;">제출 완료! ✅</div>`;
+  }
+}
+</script>
+</body>
+</html>
