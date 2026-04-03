@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시험 결과 – {{ exam.title }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #0D47A1; --sky: #4FC3F7; --green: #43A047; --red: #E53935; --orange: #FF6F00; --bg: #f0f4ff; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 18px; }
+  .back { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+  .section { background: #fff; border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 17px; color: var(--navy); margin-bottom: 16px; }
+  .summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sbox { border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 80px; }
+  .sbox .num { font-family: 'Black Han Sans'; font-size: 28px; }
+  .sbox .lbl { font-size: 12px; margin-top: 2px; }
+  .sbox.submitted { background: #e8f5e9; color: var(--green); }
+  .sbox.pending   { background: #ffebee; color: var(--red); }
+  .sbox.avg       { background: #e3f2fd; color: var(--navy); }
+
+  /* 점수 분포 */
+  .score-bar-wrap { margin-bottom: 6px; }
+  .score-bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; }
+  .score-bar { height: 18px; border-radius: 9px; background: #e3f2fd; overflow: hidden; }
+  .score-bar-fill { height: 100%; background: var(--sky); border-radius: 9px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--navy); color: #fff; padding: 9px 8px; text-align: center; }
+  td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8f9ff; }
+  .score-high { color: var(--green); font-weight: 700; }
+  .score-mid  { color: var(--orange); font-weight: 700; }
+  .score-low  { color: var(--red); font-weight: 700; }
+  .cell-right { background: #e8f5e9; color: var(--green); border-radius: 4px; }
+  .cell-wrong { background: #ffebee; color: var(--red); border-radius: 4px; }
+  .cell-nokey { background: #f5f5f5; color: #aaa; border-radius: 4px; }
+  .cell-empty { color: #ccc; }
+  .not-sub { color: #ccc; font-size: 12px; }
+  .badge-sub { background: #e8f5e9; color: var(--green); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .badge-no  { background: #ffebee; color: var(--red);   padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📊 {{ exam.title }} – 결과</h1>
+  <a href="/teacher" class="back">← 대시보드</a>
+</div>
+<div class="main">
+  {% set submit_count = answers|length %}
+  {% set scores = [] %}
+  {% for v in answers.values() %}{% if v.score is defined %}{% set _ = scores.append(v.score) %}{% endif %}{% endfor %}
+  {% set avg = (scores|sum / scores|length)|round(1) if scores else 0 %}
+  {% set not_submitted = [] %}
+  {% for n in range(1, total+1) %}{% if n|string not in answers %}{% set _ = not_submitted.append(n) %}{% endif %}{% endfor %}
+
+  <!-- 요약 -->
+  <div class="section">
+    <div class="section-title">요약</div>
+    <div class="summary">
+      <div class="sbox submitted"><div class="num">{{ submit_count }}</div><div class="lbl">제출</div></div>
+      <div class="sbox pending"><div class="num">{{ total - submit_count }}</div><div class="lbl">미제출</div></div>
+      <div class="sbox avg"><div class="num">{{ avg }}</div><div class="lbl">평균점</div></div>
+    </div>
+    {% if not_submitted %}<div style="font-size:13px;color:#c62828;">미제출: {% for n in not_submitted %}{{ n }}번{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% else %}<div style="font-size:13px;color:#2e7d32;font-weight:700;">전원 제출!</div>{% endif %}
+  </div>
+
+  <!-- 문항별 정답률 -->
+  {% if exam.answer_key %}
+  <div class="section">
+    <div class="section-title">문항별 정답률</div>
+    {% for qn in range(1, exam.question_count + 1) %}
+    {% set qkey = qn|string %}
+    {% set correct_count = [] %}
+    {% for v in answers.values() %}
+      {% if v.results is defined and v.results.get(qkey, {}).get('is_right') %}{% set _ = correct_count.append(1) %}{% endif %}
+    {% endfor %}
+    {% set rate = ((correct_count|length / submit_count * 100)|round(0)|int) if submit_count else 0 %}
+    <div class="score-bar-wrap">
+      <div class="score-bar-label">
+        <span>{{ qn }}번 (정답: {{ exam.answer_key.get(qkey, '?') }})</span>
+        <span>{{ correct_count|length }}/{{ submit_count }}명 ({{ rate }}%)</span>
+      </div>
+      <div class="score-bar"><div class="score-bar-fill" style="width:{{ rate }}%"></div></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- 전체 결과 테이블 -->
+  <div class="section">
+    <div class="section-title">전체 응답</div>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>번호</th><th>점수</th><th>시각</th>
+          {% for i in range(1, exam.question_count+1) %}<th>{{ i }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in range(1, total+1) %}
+        {% set key = n|string %}
+        <tr>
+          <td>{{ n }}번 {% if key in answers %}<span class="badge-sub">제출</span>{% else %}<span class="badge-no">미제출</span>{% endif %}</td>
+          {% if key in answers %}
+          {% set rec = answers[key] %}
+          <td class="{{ 'score-high' if rec.score >= 80 else ('score-mid' if rec.score >= 60 else 'score-low') }}">{{ rec.score }}점</td>
+          <td>{{ rec.submitted_at }}</td>
+          {% for i in range(1, exam.question_count+1) %}
+          {% set qkey = i|string %}
+          {% if rec.results is defined and qkey in rec.results %}
+            {% set r = rec.results[qkey] %}
+            {% if r.is_right is none %}<td class="cell-nokey">{{ r.student or '-' }}</td>
+            {% elif r.is_right %}<td class="cell-right">{{ r.student }}</td>
+            {% else %}<td class="cell-wrong">{{ r.student }}<br><small>→{{ r.correct }}</small></td>
+            {% endif %}
+          {% else %}<td class="cell-empty">-</td>{% endif %}
+          {% endfor %}
+          {% else %}
+          <td colspan="{{ exam.question_count + 2 }}" class="not-sub">미제출</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

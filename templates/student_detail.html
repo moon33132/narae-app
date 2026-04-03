@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ num }}번 학생 상세</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #0D47A1; --sky: #4FC3F7; --green: #43A047; --red: #E53935; --yellow: #FFD600; --bg: #f0f4ff; --orange: #FF6F00; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 20px; }
+  .back { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+  .profile-banner { background: var(--navy); color: #fff; border-radius: 16px; padding: 24px 28px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
+  .profile-num { font-family: 'Black Han Sans'; font-size: 56px; background: var(--sky); color: var(--navy); width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .profile-info h2 { font-family: 'Black Han Sans'; font-size: 24px; margin-bottom: 6px; }
+  .profile-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+  .pstat { background: rgba(255,255,255,.15); border-radius: 10px; padding: 8px 16px; font-size: 13px; }
+  .pstat strong { font-size: 20px; font-family: 'Black Han Sans'; margin-right: 4px; }
+
+  .section { background: #fff; border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 16px; color: var(--navy); margin-bottom: 16px; }
+
+  /* 출결 캘린더 */
+  .att-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .att-day { padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+  .att-day.present { background: #e8f5e9; color: var(--green); }
+  .att-day.absent  { background: #ffebee; color: var(--red); }
+
+  /* 과제 목록 */
+  .file-list { list-style: none; }
+  .file-list li { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 8px; background: #f8f9ff; margin-bottom: 7px; font-size: 13px; }
+  .dl-btn { background: var(--navy); color: #fff; border: none; padding: 5px 12px; border-radius: 7px; font-size: 12px; cursor: pointer; text-decoration: none; font-family: 'Noto Sans KR'; }
+
+  /* 시험 점수 */
+  .exam-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 12px; background: #f8f9ff; margin-bottom: 10px; }
+  .exam-name { font-weight: 700; font-size: 14px; color: var(--navy); }
+  .exam-score-box { font-family: 'Black Han Sans'; font-size: 24px; }
+  .score-high { color: var(--green); }
+  .score-mid  { color: var(--orange); }
+  .score-low  { color: var(--red); }
+  .exam-detail-btn { background: #fff3e0; color: var(--orange); border: 1px solid #ffcc80; padding: 5px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: 'Noto Sans KR'; font-weight: 700; }
+  .exam-detail-btn:hover { background: #ffe0b2; }
+
+  /* 오답 상세 */
+  .answer-detail { margin-top: 10px; display: none; }
+  .answer-detail.show { display: block; }
+  .answer-mini-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+  .amg-item { padding: 6px 4px; border-radius: 6px; text-align: center; font-size: 11px; font-weight: 700; }
+  .amg-item.right { background: #e8f5e9; color: var(--green); }
+  .amg-item.wrong { background: #ffebee; color: var(--red); }
+  .amg-item.nokey { background: #f5f5f5; color: #aaa; }
+
+  .empty { color: #bbb; font-size: 13px; text-align: center; padding: 12px; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-present { background: #e8f5e9; color: var(--green); }
+  .badge-absent  { background: #ffebee; color: var(--red); }
+
+  /* 퀴즈 */
+  .quiz-row { border: 1.5px solid #e3f2fd; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 13px; }
+  .quiz-row-title { font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .quiz-ans { display: flex; flex-wrap: wrap; gap: 6px; }
+  .quiz-ans-item { background: #f0f8ff; border-radius: 6px; padding: 4px 10px; font-size: 12px; color: #555; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>👤 {{ num }}번 학생 상세</h1>
+  <a href="/teacher" class="back">← 대시보드</a>
+</div>
+<div class="main">
+
+  <!-- 프로필 배너 -->
+  <div class="profile-banner">
+    <div class="profile-num">{{ num }}</div>
+    <div class="profile-info">
+      <h2>{{ num }}번 학생</h2>
+      <div class="profile-stats">
+        <div class="pstat"><strong>{{ present_count }}</strong>일 출석</div>
+        <div class="pstat"><strong>{{ total_days - present_count }}</strong>일 결석</div>
+        <div class="pstat">총 <strong>{{ total_days }}</strong>일</div>
+        <div class="pstat"><strong>{{ uploads|length }}</strong>개 과제 제출</div>
+        <div class="pstat"><strong>{{ exam_records|length }}</strong>회 시험</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 출결 현황 -->
+  <div class="section">
+    <div class="section-title">📅 출결 현황</div>
+    {% if att_records %}
+    <div class="att-grid">
+      {% for d, v in att_records.items() %}
+      <div class="att-day {{ 'present' if v.present else 'absent' }}" title="{{ v.time if v.present else '결석' }}">
+        {{ d[5:] }} {{ '✓' if v.present else '✗' }}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">출결 기록이 없어요.</p>{% endif %}
+  </div>
+
+  <!-- 시험 점수 -->
+  <div class="section">
+    <div class="section-title">📋 단원평가 점수</div>
+    {% if exam_records %}
+      {% for rec in exam_records %}
+      {% set score = rec.data.score %}
+      <div class="exam-row">
+        <div>
+          <div class="exam-name">{{ rec.title }}</div>
+          <div style="font-size:11px;color:#aaa;margin-top:3px;">{{ rec.data.date }} {{ rec.data.submitted_at }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="exam-score-box {{ 'score-high' if score >= 80 else ('score-mid' if score >= 60 else 'score-low') }}">
+            {{ score }}점
+          </div>
+          <button class="exam-detail-btn" onclick="toggleDetail(this)">오답보기</button>
+        </div>
+      </div>
+      <div class="answer-detail">
+        <div class="answer-mini-grid">
+          {% for qn, r in rec.data.results.items() %}
+          <div class="amg-item {{ 'right' if r.is_right else ('nokey' if r.is_right is none else 'wrong') }}">
+            {{ qn }}번<br>
+            {% if r.is_right %} ✓
+            {% elif r.is_right is none %} -
+            {% else %} ✗<br><span style="color:#888">{{ r.correct }}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}<p class="empty">시험 기록이 없어요.</p>{% endif %}
+  </div>
+
+  <!-- 과제 제출 -->
+  <div class="section">
+    <div class="section-title">📤 과제 제출 현황 ({{ uploads|length }}개)</div>
+    {% if uploads %}
+    <ul class="file-list">
+      {% for f in uploads %}
+      <li>
+        <span style="flex:1;word-break:break-all;font-size:13px;">📎 {{ f }}</span>
+        <a class="dl-btn" href="/teacher/uploads/{{ f }}">다운로드</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="empty">제출된 과제가 없어요.</p>{% endif %}
+  </div>
+
+  <!-- 퀴즈/설문 응답 -->
+  <div class="section">
+    <div class="section-title">📝 퀴즈/설문 응답</div>
+    {% if quiz_records %}
+      {% for rec in quiz_records %}
+      <div class="quiz-row">
+        <div class="quiz-row-title">{{ rec.title }}</div>
+        <div class="quiz-ans">
+          {% for i, q in rec.questions | enumerate %}
+          <div class="quiz-ans-item">
+            Q{{ i+1 }}. {{ rec.data.answers.get(i|string, '-') }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}<p class="empty">퀴즈 응답이 없어요.</p>{% endif %}
+  </div>
+
+</div>
+<script>
+function toggleDetail(btn) {
+  const detail = btn.closest('.exam-row').nextElementSibling;
+  detail.classList.toggle('show');
+  btn.textContent = detail.classList.contains('show') ? '접기' : '오답보기';
+}
+</script>
+</body>
+</html>
