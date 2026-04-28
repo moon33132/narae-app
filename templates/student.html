@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나래반 – {{ num }}번</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --sky: #4FC3F7; --navy: #0D47A1; --yellow: #FFD600; --green: #43A047; --red: #E53935; --bg: #E3F2FD; --orange: #FF6F00; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); min-height: 100vh; }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 20px; }
+  .logout { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR'; }
+  .att-banner { background: #e8f5e9; border-bottom: 2px solid #a5d6a7; padding: 10px 20px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: 700; }
+  .main { max-width: 700px; margin: 0 auto; padding: 20px 16px 40px; }
+  .section { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 17px; color: var(--navy); margin-bottom: 14px; }
+  .notice-item { border-left: 4px solid var(--sky); padding: 10px 14px; background: #f0f8ff; border-radius: 0 10px 10px 0; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
+  .notice-date { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .file-list { list-style: none; }
+  .file-list li { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; background: #f8f9ff; margin-bottom: 8px; font-size: 14px; }
+  .dl-btn { background: var(--navy); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; font-family: 'Noto Sans KR'; margin-left: 10px; }
+  .upload-area { border: 2.5px dashed #90caf9; border-radius: 14px; padding: 24px; text-align: center; cursor: pointer; background: #f0f8ff; transition: all .2s; }
+  .upload-area:hover { border-color: var(--sky); background: #e1f5fe; }
+  .upload-area input { display: none; }
+  .upload-btn { margin-top: 12px; background: var(--sky); color: var(--navy); border: none; padding: 12px 28px; border-radius: 10px; font-family: 'Black Han Sans'; font-size: 16px; cursor: pointer; display: none; }
+  .empty { color: #bbb; font-size: 14px; text-align: center; padding: 12px; }
+
+  /* 단어시험 */
+  .wt-card { border: 2px solid #fff3e0; border-radius: 14px; padding: 16px; margin-bottom: 12px; background: #fffde7; }
+  .wt-title { font-weight: 700; color: #e65100; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .wt-meta { font-size: 12px; color: #aaa; margin-bottom: 12px; }
+  .wt-start-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; background: var(--orange); color: #fff; font-family: 'Black Han Sans'; font-size: 16px; cursor: pointer; letter-spacing: 1px; }
+  .wt-start-btn:hover { filter: brightness(1.1); }
+  .wt-done { text-align: center; padding: 10px; color: var(--green); font-weight: 700; font-size: 14px; }
+
+  /* 단원평가 */
+  .exam-card { border: 2px solid #e8eaf6; border-radius: 14px; padding: 16px; margin-bottom: 12px; background: #f8f9ff; }
+  .exam-title { font-weight: 700; color: var(--navy); font-size: 15px; margin-bottom: 8px; }
+  .answer-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+  .answer-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .answer-item label { font-size: 12px; font-weight: 700; color: #888; margin: 0; }
+  .answer-item input { width: 100%; padding: 8px 4px; border: 1.5px solid #c5cae9; border-radius: 8px; text-align: center; font-size: 15px; font-weight: 700; outline: none; background: #fff; font-family: 'Noto Sans KR'; }
+  .answer-item input:focus { border-color: var(--navy); }
+  .exam-submit { background: var(--navy); color: #fff; border: none; padding: 14px; border-radius: 10px; font-family: 'Black Han Sans'; font-size: 16px; cursor: pointer; width: 100%; }
+
+  /* 퀴즈 */
+  .quiz-card { border: 2px solid #e3f2fd; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .quiz-title { font-weight: 700; color: var(--navy); margin-bottom: 12px; font-size: 15px; }
+  .question { margin-bottom: 14px; }
+  .question p { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .question input[type=text] { width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-family: 'Noto Sans KR'; font-size: 14px; outline: none; }
+  .question input[type=text]:focus { border-color: var(--sky); }
+  .choices label { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; background: #f5f5f5; margin-bottom: 6px; font-size: 14px; cursor: pointer; font-weight: 400; color: #333; }
+  .choices label:hover { background: #e3f2fd; }
+  .quiz-submit { background: var(--yellow); color: var(--navy); border: none; padding: 12px 24px; border-radius: 10px; font-family: 'Black Han Sans'; font-size: 16px; cursor: pointer; width: 100%; }
+
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  .answer-feedback { display: grid; grid-template-columns: repeat(5,1fr); gap:6px; margin-top:12px; }
+  .fb-item { padding:6px 4px; border-radius:8px; text-align:center; font-size:12px; font-weight:700; }
+  .fb-item.right { background:#e8f5e9; color:var(--green); }
+  .fb-item.wrong { background:#ffebee; color:var(--red); }
+  .fb-item.no-key { background:#f5f5f5; color:#aaa; }
+  .exam-result-box { padding:16px; border-radius:12px; background:#e8f5e9; border:2px solid #a5d6a7; text-align:center; }
+  .exam-result-score { font-family:'Black Han Sans'; font-size:36px; color:var(--green); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>🌟 나래반 – {{ num }}번</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;opacity:.8;">{{ today }}</span>
+    <a href="/logout"><button class="logout">나가기</button></a>
+  </div>
+</div>
+<div class="att-banner">✅ {{ today }} 출석이 확인되었어요!</div>
+<div class="main">
+
+  <!-- 공지 -->
+  <div class="section">
+    <div class="section-title">📢 선생님 공지</div>
+    {% if notices %}
+      {% for n in notices %}
+      <div class="notice-item">{{ n.content }}<div class="notice-date">{{ n.date }}</div></div>
+      {% endfor %}
+    {% else %}<p class="empty">공지사항이 없어요.</p>{% endif %}
+  </div>
+
+  <!-- 단어시험 -->
+  {% if active_word_tests %}
+  <div class="section">
+    <div class="section-title">📖 단어시험</div>
+    {% for wt in active_word_tests %}
+    {% if wt.id in submitted_wt %}
+    <div class="wt-card">
+      <div class="wt-title">✅ {{ wt.title }}</div>
+      <div class="wt-done">제출 완료!
+        <a href="/word_test/{{ wt.id }}" style="margin-left:10px;color:var(--navy);font-size:13px;">결과 보기 →</a>
+      </div>
+    </div>
+    {% else %}
+    <div class="wt-card">
+      <div class="wt-title">📖 {{ wt.title }}</div>
+      <div class="wt-meta">{{ wt.words|length }}단어 ·
+        {% if wt.direction == 'ko_to_en' %}한글 보고 영어 쓰기
+        {% elif wt.direction == 'en_to_ko' %}영어 보고 한글 쓰기
+        {% else %}혼합 (한↔영){% endif %}
+        · 한 번 제출하면 수정 불가
+      </div>
+      <a href="/word_test/{{ wt.id }}"><button class="wt-start-btn">✏️ 시험 시작하기</button></a>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- 단원평가 -->
+  {% if active_exams %}
+  <div class="section">
+    <div class="section-title">📋 단원평가</div>
+    {% for exam in active_exams %}
+    {% if exam.id in submitted_exams %}
+    <div class="exam-card">
+      <div class="exam-title">✅ {{ exam.title }} – 제출 완료</div>
+    </div>
+    {% else %}
+    <div class="exam-card" id="exam-{{ exam.id }}">
+      <div class="exam-title">📋 {{ exam.title }} ({{ exam.question_count }}문항)</div>
+      <div class="answer-grid">
+        {% for i in range(1, exam.question_count + 1) %}
+        <div class="answer-item">
+          <label>{{ i }}번</label>
+          <input type="text" id="exam-{{ exam.id }}-{{ i }}" maxlength="3" placeholder="답">
+        </div>
+        {% endfor %}
+      </div>
+      <button class="exam-submit" onclick="submitExam('{{ exam.id }}', {{ exam.question_count }})">제출하기</button>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- 배포 파일 -->
+  <div class="section">
+    <div class="section-title">📥 선생님이 나눠준 파일</div>
+    {% if shared_files %}
+    <ul class="file-list">
+      {% for f in shared_files %}
+      <li><span style="flex:1;word-break:break-all;">📄 {{ f }}</span>
+        <a class="dl-btn" href="/download/{{ f }}">다운로드</a></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="empty">배포된 파일이 없어요.</p>{% endif %}
+  </div>
+
+  <!-- 과제 제출 -->
+  <div class="section">
+    <div class="section-title">📤 과제 제출</div>
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" onchange="fileSelected(this)">
+      <div style="font-size:36px;">📎</div>
+      <p style="font-size:14px;color:#5c6bc0;margin-top:8px;">여기를 눌러서 파일 선택</p>
+    </div>
+    <div id="selected-file" style="display:none;margin-top:10px;font-size:13px;color:#555;text-align:center;"></div>
+    <button class="upload-btn" id="upload-btn" onclick="uploadFile()">제출하기</button>
+    <div id="upload-result" style="margin-top:10px;font-size:14px;text-align:center;"></div>
+  </div>
+
+  <!-- 퀴즈/설문 -->
+  {% if active_quizzes %}
+  <div class="section">
+    <div class="section-title">📝 퀴즈 / 설문</div>
+    {% for quiz in active_quizzes %}
+    <div class="quiz-card" id="quiz-{{ quiz.id }}">
+      <div class="quiz-title">{{ quiz.title }}</div>
+      {% for i, q in quiz.questions | enumerate %}
+      <div class="question">
+        <p>Q{{ i+1 }}. {{ q.text }}</p>
+        {% if q.type == 'choice' %}
+        <div class="choices">
+          {% for c in q.choices %}
+          <label><input type="radio" name="q{{ quiz.id }}_{{ i }}" value="{{ c }}"> {{ c }}</label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <input type="text" id="ans-{{ quiz.id }}-{{ i }}" placeholder="답을 입력해주세요">
+        {% endif %}
+      </div>
+      {% endfor %}
+      <button class="quiz-submit" onclick="submitQuiz('{{ quiz.id }}', {{ quiz.questions|length }})">제출하기</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+<div class="toast" id="toast"></div>
+<script>
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = ok ? '#1b5e20' : '#b71c1c';
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000);
+}
+function fileSelected(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('selected-file').style.display='block';
+  document.getElementById('selected-file').textContent='선택: '+file.name;
+  document.getElementById('upload-btn').style.display='block';
+}
+async function uploadFile() {
+  const input = document.getElementById('file-input'); if (!input.files[0]) return;
+  const fd = new FormData(); fd.append('file', input.files[0]);
+  document.getElementById('upload-btn').textContent='제출 중...';
+  const res = await fetch('/upload',{method:'POST',body:fd});
+  const data = await res.json(); showToast(data.msg, data.ok);
+  document.getElementById('upload-result').textContent=data.msg;
+  document.getElementById('upload-result').style.color=data.ok?'#2e7d32':'#c62828';
+  if(data.ok){input.value='';document.getElementById('selected-file').style.display='none';document.getElementById('upload-btn').style.display='none';}
+  document.getElementById('upload-btn').textContent='제출하기';
+}
+async function submitExam(eid, qcount) {
+  const answers={};
+  for(let i=1;i<=qcount;i++){const el=document.getElementById(`exam-${eid}-${i}`);answers[i]=el?el.value.trim():'';}
+  const res=await fetch(`/exam/${eid}/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
+  const data=await res.json(); showToast(data.msg,data.ok);
+  if(data.ok){
+    const card=document.getElementById(`exam-${eid}`);
+    let html=`<div class="exam-result-box"><div class="exam-result-score">${data.score}점</div><div style="font-size:14px;color:#555;margin-top:4px;">제출 완료!</div><div class="answer-feedback">`;
+    for(let i=1;i<=qcount;i++){const r=data.results[i];if(!r)continue;
+      if(r.is_right===null)html+=`<div class="fb-item no-key">${i}번<br>${r.student||'-'}</div>`;
+      else if(r.is_right)html+=`<div class="fb-item right">${i}번<br>✓</div>`;
+      else html+=`<div class="fb-item wrong">${i}번<br>✗ ${r.correct}</div>`;}
+    html+=`</div></div>`; card.innerHTML=html;
+  }
+}
+async function submitQuiz(qid, qcount) {
+  const answers={};
+  for(let i=0;i<qcount;i++){const radio=document.querySelector(`input[name="q${qid}_${i}"]:checked`);const text=document.getElementById(`ans-${qid}-${i}`);if(radio)answers[i]=radio.value;else if(text)answers[i]=text.value.trim();}
+  const res=await fetch(`/quiz/${qid}/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
+  const data=await res.json(); showToast(data.msg,data.ok);
+  if(data.ok)document.getElementById(`quiz-${qid}`).innerHTML=`<div style="text-align:center;padding:20px;color:#2e7d32;font-weight:700;">제출 완료! ✅</div>`;
+}
+</script>
+</body>
+</html>

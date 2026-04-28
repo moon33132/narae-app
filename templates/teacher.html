@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나래반 선생님</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #0D47A1; --sky: #4FC3F7; --yellow: #FFD600; --green: #43A047; --red: #E53935; --bg: #f0f4ff; --orange: #FF6F00; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 20px; }
+  .logout { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .main { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:640px) { .grid2 { grid-template-columns: 1fr; } }
+  .section { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 16px; color: var(--navy); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+
+  .att-summary { display: flex; gap: 10px; margin-bottom: 14px; }
+  .att-box { flex: 1; border-radius: 12px; padding: 12px; text-align: center; }
+  .att-box .num { font-family: 'Black Han Sans'; font-size: 26px; }
+  .att-box .lbl { font-size: 12px; margin-top: 2px; }
+  .att-box.present { background: #e8f5e9; color: var(--green); }
+  .att-box.absent  { background: #ffebee; color: var(--red); }
+  .att-box.total   { background: #e3f2fd; color: var(--navy); }
+  .num-grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: 5px; margin-bottom: 10px; }
+  .num-badge { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .num-badge.present { background: var(--green); color: #fff; }
+  .num-badge.absent  { background: #ffcdd2; color: var(--red); }
+
+  textarea, input[type=text], input[type=number], select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+    font-family: 'Noto Sans KR'; font-size: 14px; outline: none; margin-bottom: 8px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { border-color: var(--sky); }
+  .flabel { font-size: 12px; font-weight: 700; color: #5c6bc0; margin-bottom: 4px; display: block; }
+  .hint { font-size: 12px; color: #aaa; line-height: 1.6; margin-top: 2px; margin-bottom: 8px; }
+
+  .btn-sm { padding: 7px 16px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR'; font-weight: 700; }
+  .btn-primary { background: var(--navy); color: #fff; }
+  .btn-primary:hover { background: #1565C0; }
+  .btn-danger  { background: #ffebee; color: var(--red); border: 1px solid #ef9a9a; }
+  .btn-danger:hover { background: #ffcdd2; }
+  .btn-warn    { background: #fff3e0; color: var(--orange); border: 1px solid #ffcc80; }
+  .btn-warn:hover { background: #ffe0b2; }
+  .btn-orange  { background: var(--orange); color: #fff; }
+  .btn-orange:hover { filter: brightness(1.1); }
+
+  .file-list { list-style: none; }
+  .file-list li { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; background: #f8f9ff; margin-bottom: 6px; font-size: 13px; gap: 8px; }
+  .file-list li .fname { flex: 1; word-break: break-all; }
+  .factions { display: flex; gap: 5px; }
+
+  .notice-item { border-left: 4px solid var(--sky); padding: 9px 12px; background: #f0f8ff; border-radius: 0 10px 10px 0; margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .notice-item .ncontent { flex: 1; line-height: 1.5; }
+
+  .item-card { border-radius: 12px; padding: 14px; margin-bottom: 10px; border: 1.5px solid #e3f2fd; }
+  .item-card.wt  { border-color: #ffe0b2; background: #fff8f0; }
+  .item-card.exam { border-color: #e8eaf6; background: #f8f9ff; }
+  .item-card.quiz { border-color: #e3f2fd; }
+  .item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .item-title { font-weight: 700; font-size: 14px; color: var(--navy); }
+  .item-card.wt .item-title { color: #e65100; }
+  .item-meta { font-size: 12px; color: #888; margin-top: 5px; }
+  .item-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-on  { background: #e8f5e9; color: var(--green); }
+  .badge-off { background: #f5f5f5; color: #aaa; }
+
+  .empty { color: #bbb; font-size: 13px; text-align: center; padding: 12px; }
+  .export-btn { background: var(--green); color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR'; text-decoration: none; display: inline-block; }
+
+  .student-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  @media(max-width:500px) { .student-grid { grid-template-columns: repeat(4, 1fr); } }
+  .student-card { border-radius: 12px; padding: 10px 6px; text-align: center; cursor: pointer; text-decoration: none; border: 2px solid #e3f2fd; background: #f8fbff; transition: all .15s; }
+  .student-card:hover { border-color: var(--sky); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79,195,247,.3); }
+  .student-card .snum { font-family: 'Black Han Sans'; font-size: 22px; color: var(--navy); }
+  .student-card .sreg { font-size: 10px; margin-top: 3px; }
+  .sreg.ok { color: var(--green); }
+  .sreg.no { color: #ccc; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>👩‍🏫 나래반 선생님</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;opacity:.8;">{{ today }}</span>
+    <a href="/logout"><button class="logout">나가기</button></a>
+  </div>
+</div>
+<div class="main">
+
+  <!-- 학생별 보기 -->
+  <div class="section">
+    <div class="section-title">👤 학생별 상세 보기</div>
+    <div class="student-grid">
+      {% for n in range(1, total+1) %}
+      <a class="student-card" href="/teacher/student/{{ n }}">
+        <div class="snum">{{ n }}</div>
+        <div class="sreg {{ 'ok' if n in registered else 'no' }}">{{ '🔐 등록' if n in registered else '미등록' }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 출석 -->
+  <div class="section">
+    <div class="section-title">✋ 출석 현황 <a class="export-btn" href="/teacher/attendance/export">CSV</a></div>
+    <div class="att-summary">
+      <div class="att-box total"><div class="num">{{ total }}</div><div class="lbl">전체</div></div>
+      <div class="att-box present"><div class="num">{{ checked|length }}</div><div class="lbl">출석</div></div>
+      <div class="att-box absent"><div class="num">{{ absent|length }}</div><div class="lbl">미확인</div></div>
+    </div>
+    <div class="num-grid">
+      {% for n in range(1, total+1) %}
+      <div class="num-badge {{ 'present' if n in checked else 'absent' }}">{{ n }}</div>
+      {% endfor %}
+    </div>
+    {% if absent %}<div style="font-size:13px;color:#c62828;">미확인: {% for n in absent %}{{ n }}번{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% else %}<div style="font-size:13px;color:#2e7d32;font-weight:700;">전원 출석!</div>{% endif %}
+  </div>
+
+  <div class="grid2">
+    <!-- 공지 -->
+    <div class="section">
+      <div class="section-title">📢 공지사항</div>
+      <form method="post" action="/teacher/notice/add">
+        <label class="flabel">새 공지</label>
+        <textarea name="content" rows="3" placeholder="공지 내용"></textarea>
+        <button type="submit" class="btn-sm btn-primary">등록</button>
+      </form>
+      <hr style="margin:12px 0;border:none;border-top:1px solid #f0f0f0;">
+      {% if notices %}
+        {% for n in notices %}
+        <div class="notice-item">
+          <div class="ncontent">{{ n.content }}<div style="font-size:11px;color:#aaa;margin-top:3px;">{{ n.date }}</div></div>
+          <a href="/teacher/notice/delete/{{ n.id }}"><button class="btn-sm btn-danger">삭제</button></a>
+        </div>
+        {% endfor %}
+      {% else %}<p class="empty">없음</p>{% endif %}
+    </div>
+
+    <!-- 파일 배포 -->
+    <div class="section">
+      <div class="section-title">📤 파일 배포</div>
+      <form method="post" action="/teacher/share" enctype="multipart/form-data">
+        <input type="file" name="file" style="font-size:13px;margin-bottom:8px;">
+        <button type="submit" class="btn-sm btn-primary">배포</button>
+      </form>
+      <hr style="margin:12px 0;border:none;border-top:1px solid #f0f0f0;">
+      {% if shared_files %}
+      <ul class="file-list">
+        {% for f in shared_files %}
+        <li><span class="fname">📄 {{ f }}</span>
+          <a href="/teacher/share/delete/{{ f }}"><button class="btn-sm btn-danger">삭제</button></a></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="empty">없음</p>{% endif %}
+    </div>
+  </div>
+
+  <!-- 제출 파일 -->
+  <div class="section">
+    <div class="section-title">📥 학생 제출 파일 ({{ uploads|length }}개)</div>
+    {% if uploads %}
+    <ul class="file-list">
+      {% for f in uploads %}
+      <li><span class="fname">📎 {{ f }}</span>
+        <div class="factions">
+          <a href="/teacher/uploads/{{ f }}"><button class="btn-sm btn-primary">다운</button></a>
+          <a href="/teacher/uploads/delete/{{ f }}"><button class="btn-sm btn-danger">삭제</button></a>
+        </div></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="empty">없음</p>{% endif %}
+  </div>
+
+  <!-- ★ 단어시험 만들기 -->
+  <div class="section">
+    <div class="section-title">📖 단어시험 만들기</div>
+    
+    <!-- Day 버튼으로 즉시 시험 생성 -->
+    <div style="margin-bottom:16px;">
+      <label class="flabel">📅 Day 버튼으로 즉시 배포</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:12px;color:#888;">방향:</span>
+        <select id="day-direction" style="width:auto;margin-bottom:0;padding:6px 10px;font-size:13px;">
+          <option value="ko_to_en">한→영</option>
+          <option value="en_to_ko">영→한</option>
+          <option value="mixed">혼합</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px;">
+        {% for d in range(1,31) %}
+        <form method="post" action="/teacher/word_test/from_day" id="day-form-{{d}}" style="margin:0;">
+          <input type="hidden" name="day" value="{{d}}">
+          <input type="hidden" name="direction" id="dir-{{d}}" value="ko_to_en">
+          <button type="submit"
+            onclick="document.getElementById('dir-{{d}}').value=document.getElementById('day-direction').value"
+            style="width:100%;padding:8px 4px;border:1.5px solid #ffe0b2;border-radius:8px;background:#fff8f0;color:#e65100;font-weight:700;font-size:13px;cursor:pointer;font-family:'Noto Sans KR';"
+            onmouseover="this.style.background='#FF6F00';this.style.color='#fff'"
+            onmouseout="this.style.background='#fff8f0';this.style.color='#e65100'">
+            Day{{d}}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      <hr style="border:none;border-top:1px solid #f0f0f0;margin-bottom:14px;">
+      <label class="flabel">✏️ 직접 단어 입력으로 만들기</label>
+    </div>
+<form method="post" action="/teacher/word_test/add">
+      <div class="grid2" style="gap:10px;margin-bottom:8px;">
+        <div>
+          <label class="flabel">시험 제목</label>
+          <input type="text" name="title" placeholder="예) 5단원 단어시험">
+        </div>
+        <div>
+          <label class="flabel">방향</label>
+          <select name="direction">
+            <option value="ko_to_en">한글 보고 영어 쓰기</option>
+            <option value="en_to_ko">영어 보고 한글 쓰기</option>
+            <option value="mixed">혼합 (한↔영 번갈아)</option>
+          </select>
+        </div>
+      </div>
+      <label class="flabel">단어 목록</label>
+      <textarea name="words" rows="8" placeholder="한글,영어 형식으로 한 줄에 하나씩&#10;&#10;사과,apple&#10;바나나,banana&#10;학교,school&#10;친구,friend"></textarea>
+      <p class="hint">※ 한글,영어 순서로 콤마(,)로 구분해서 입력하세요.<br>엑셀에서 복사할 때는 탭으로 구분된 것도 인식해요.</p>
+      <button type="submit" class="btn-sm btn-orange">단어시험 만들기</button>
+    </form>
+
+    {% if word_tests %}
+    <hr style="margin:16px 0;border:none;border-top:1px solid #f0f0f0;">
+    {% for w in word_tests %}
+    <div class="item-card wt">
+      <div class="item-header">
+        <span class="item-title">📖 {{ w.title }}</span>
+        <span class="badge {{ 'badge-on' if w.active else 'badge-off' }}">{{ '진행중' if w.active else '종료' }}</span>
+      </div>
+      <div class="item-meta">
+        {{ w.created }} | {{ w.words|length }}단어 |
+        {% if w.direction == 'ko_to_en' %}한→영
+        {% elif w.direction == 'en_to_ko' %}영→한
+        {% else %}혼합{% endif %} |
+        제출: {{ w.submit_count }}/{{ total }}명 | 평균: {{ w.avg_score }}%
+      </div>
+      <div class="item-actions">
+        <a href="/teacher/word_test/{{ w.id }}/results"><button class="btn-sm btn-primary">결과 보기</button></a>
+        <a href="/teacher/word_test/toggle/{{ w.id }}"><button class="btn-sm btn-warn">{{ '종료' if w.active else '재개' }}</button></a>
+        <a href="/teacher/word_test/delete/{{ w.id }}" onclick="return confirm('삭제할까요?')"><button class="btn-sm btn-danger">삭제</button></a>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- 단원평가 -->
+  <div class="section">
+    <div class="section-title">📋 단원평가 만들기</div>
+    <form method="post" action="/teacher/exam/add">
+      <div class="grid2" style="gap:10px;margin-bottom:8px;">
+        <div><label class="flabel">시험 제목</label><input type="text" name="title" placeholder="예) 3단원 단원평가"></div>
+        <div><label class="flabel">문항 수</label><input type="number" name="question_count" value="20" min="1" max="50"></div>
+      </div>
+      <label class="flabel">정답 입력</label>
+      <textarea name="answer_key" rows="3" placeholder="1:3,2:1,3:4,4:2 (문항번호:정답)"></textarea>
+      <button type="submit" class="btn-sm btn-primary">시험 만들기</button>
+    </form>
+    {% if exams %}
+    <hr style="margin:14px 0;border:none;border-top:1px solid #f0f0f0;">
+    {% for e in exams %}
+    <div class="item-card exam">
+      <div class="item-header">
+        <span class="item-title">📋 {{ e.title }}</span>
+        <span class="badge {{ 'badge-on' if e.active else 'badge-off' }}">{{ '진행중' if e.active else '종료' }}</span>
+      </div>
+      <div class="item-meta">{{ e.created }} | {{ e.question_count }}문항 | 제출: {{ e.submit_count }}/{{ total }}명 | 평균: {{ e.avg_score }}점</div>
+      <div class="item-actions">
+        <a href="/teacher/exam/{{ e.id }}/results"><button class="btn-sm btn-primary">결과</button></a>
+        <a href="/teacher/exam/toggle/{{ e.id }}"><button class="btn-sm btn-warn">{{ '종료' if e.active else '재개' }}</button></a>
+        <a href="/teacher/exam/delete/{{ e.id }}" onclick="return confirm('삭제?')"><button class="btn-sm btn-danger">삭제</button></a>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- 퀴즈/설문 -->
+  <div class="section">
+    <div class="section-title">📝 퀴즈 / 설문</div>
+    <form method="post" action="/teacher/quiz/add">
+      <div class="grid2" style="gap:10px;margin-bottom:8px;">
+        <div><label class="flabel">제목</label><input type="text" name="title" placeholder="퀴즈 제목"></div>
+        <div><label class="flabel">종류</label><select name="qtype"><option value="quiz">퀴즈</option><option value="survey">설문</option></select></div>
+      </div>
+      <label class="flabel">문항</label>
+      <textarea name="questions" rows="4" placeholder="단답형: 우리나라 수도는?&#10;객관식: 좋아하는 계절|봄,여름,가을,겨울"></textarea>
+      <button type="submit" class="btn-sm btn-primary">만들기</button>
+    </form>
+    {% if quizzes %}
+    <hr style="margin:14px 0;border:none;border-top:1px solid #f0f0f0;">
+    {% for q in quizzes %}
+    <div class="item-card quiz">
+      <div class="item-header">
+        <span class="item-title">{{ q.title }}</span>
+        <span class="badge {{ 'badge-on' if q.active else 'badge-off' }}">{{ '진행중' if q.active else '종료' }}</span>
+      </div>
+      <div class="item-meta">{{ q.created }} | {{ q.questions|length }}문항 | 제출: {{ q.submit_count }}/{{ total }}명</div>
+      <div class="item-actions">
+        <a href="/teacher/quiz/{{ q.id }}/results"><button class="btn-sm btn-primary">결과</button></a>
+        <a href="/teacher/quiz/toggle/{{ q.id }}"><button class="btn-sm btn-warn">{{ '종료' if q.active else '재개' }}</button></a>
+        <a href="/teacher/quiz/delete/{{ q.id }}" onclick="return confirm('삭제?')"><button class="btn-sm btn-danger">삭제</button></a>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- 비밀번호 초기화 -->
+  <div class="section">
+    <div class="section-title">🔑 학생 비밀번호 초기화</div>
+    <p style="font-size:13px;color:#888;margin-bottom:12px;">비밀번호를 잊어버린 학생 번호를 클릭하면 초기화됩니다.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      {% for n in range(1, total+1) %}{% if n in registered %}
+      <a href="/teacher/reset_pw/{{ n }}" onclick="return confirm('{{ n }}번 비밀번호를 초기화할까요?')">
+        <button class="btn-sm btn-warn">{{ n }}번</button>
+      </a>
+      {% endif %}{% endfor %}
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

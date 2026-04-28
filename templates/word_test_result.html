@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시험 결과 – {{ test.title }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #0D47A1; --sky: #4FC3F7; --green: #43A047; --red: #E53935; --bg: #E3F2FD; --orange: #FF6F00; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); min-height: 100vh; }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 18px; }
+  .back { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .main { max-width: 680px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .score-card { background: var(--navy); color: #fff; border-radius: 20px; padding: 32px; text-align: center; margin-bottom: 20px; }
+  .score-card h2 { font-family: 'Black Han Sans'; font-size: 20px; margin-bottom: 16px; opacity: .8; }
+  .big-score { font-family: 'Black Han Sans'; font-size: 72px; color: var(--sky); line-height: 1; }
+  .big-score span { font-size: 32px; color: #fff; opacity: .7; }
+  .score-sub { margin-top: 10px; font-size: 14px; opacity: .7; }
+  .rank-box { margin-top: 16px; background: rgba(255,255,255,.12); border-radius: 12px; padding: 12px 20px; font-size: 15px; font-weight: 700; }
+
+  .section { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 16px; color: var(--navy); margin-bottom: 14px; }
+
+  .result-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; margin-bottom: 8px; }
+  .result-item.right { background: #e8f5e9; border-left: 4px solid var(--green); }
+  .result-item.wrong { background: #ffebee; border-left: 4px solid var(--red); }
+  .ri-num { font-size: 12px; font-weight: 700; color: #aaa; min-width: 30px; }
+  .ri-q   { font-size: 15px; font-weight: 700; color: var(--navy); min-width: 100px; }
+  .ri-arrow { color: #bbb; font-size: 14px; }
+  .ri-student { font-size: 15px; flex: 1; }
+  .right .ri-student { color: var(--green); font-weight: 700; }
+  .wrong .ri-student { color: var(--red); text-decoration: line-through; }
+  .ri-correct { font-size: 13px; color: var(--green); font-weight: 700; }
+  .ri-icon { font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📝 {{ test.title }} 결과</h1>
+  <a href="/student" class="back">← 홈으로</a>
+</div>
+<div class="main">
+
+  <!-- 점수 카드 -->
+  {% set pct = result.score_pct %}
+  <div class="score-card">
+    <h2>{{ num }}번 · {{ test.title }}</h2>
+    <div class="big-score">{{ result.score }}<span>/{{ result.total }}</span></div>
+    <div class="score-sub">정답률 {{ pct }}% · {{ result.date }} {{ result.submitted_at }}</div>
+    <div class="rank-box">
+      {% if pct == 100 %}🏆 완벽해요! 모두 맞췄어요!
+      {% elif pct >= 90 %}🥇 훌륭해요! 거의 다 맞췄어요!
+      {% elif pct >= 70 %}🥈 잘했어요! 조금만 더 연습해요!
+      {% elif pct >= 50 %}🥉 절반 이상 맞췄어요. 다시 복습해봐요!
+      {% else %}📖 틀린 단어들을 다시 외워봐요!
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 채점 결과 -->
+  <div class="section">
+    <div class="section-title">📋 채점 결과</div>
+    {% for r in result.results %}
+    <div class="result-item {{ 'right' if r.is_right else 'wrong' }}">
+      <span class="ri-num">{{ loop.index }}</span>
+      <span class="ri-q">{{ r.q }}</span>
+      <span class="ri-arrow">→</span>
+      <span class="ri-student">{{ r.student if r.student else '(미입력)' }}</span>
+      {% if not r.is_right %}
+      <span class="ri-correct">정답: {{ r.correct }}</span>
+      {% endif %}
+      <span class="ri-icon">{{ '✅' if r.is_right else '❌' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>단어시험 결과 – {{ test.title }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #0D47A1; --sky: #4FC3F7; --green: #43A047; --red: #E53935; --orange: #FF6F00; --bg: #f0f4ff; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 18px; }
+  .back { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; text-decoration: none; }
+  .main { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  .section { background: #fff; border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 16px; color: var(--navy); margin-bottom: 16px; }
+
+  .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .sbox { border-radius: 12px; padding: 14px 20px; text-align: center; }
+  .sbox .num { font-family: 'Black Han Sans'; font-size: 28px; }
+  .sbox .lbl { font-size: 12px; margin-top: 2px; }
+  .sbox.sub  { background: #e8f5e9; color: var(--green); }
+  .sbox.pend { background: #ffebee; color: var(--red); }
+  .sbox.avg  { background: #e3f2fd; color: var(--navy); }
+
+  /* 단어별 정답률 */
+  .word-stat { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+  .ws-ko  { min-width: 90px; font-weight: 700; color: var(--navy); font-size: 13px; }
+  .ws-en  { min-width: 110px; color: #888; font-size: 13px; }
+  .ws-bar { flex: 1; height: 14px; background: #f0f0f0; border-radius: 7px; overflow: hidden; }
+  .ws-fill { height: 100%; border-radius: 7px; }
+  .ws-pct { min-width: 45px; text-align: right; font-size: 12px; font-weight: 700; }
+
+  /* 학생별 결과 테이블 */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--navy); color: #fff; padding: 8px 6px; text-align: center; white-space: nowrap; }
+  td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f8f9ff; }
+  .cell-right { background: #e8f5e9; color: var(--green); border-radius: 4px; padding: 2px 4px; font-weight: 700; }
+  .cell-wrong { background: #ffebee; color: var(--red); border-radius: 4px; padding: 2px 4px; }
+  .cell-empty { color: #ccc; }
+  .score-high { color: var(--green); font-weight: 700; font-size: 14px; }
+  .score-mid  { color: var(--orange); font-weight: 700; font-size: 14px; }
+  .score-low  { color: var(--red); font-weight: 700; font-size: 14px; }
+  .badge-sub { background: #e8f5e9; color: var(--green); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .badge-no  { background: #ffebee; color: var(--red);   padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📊 {{ test.title }} – 결과</h1>
+  <a href="/teacher" class="back">← 대시보드</a>
+</div>
+<div class="main">
+  {% set submit_count = answers|length %}
+  {% set scores = answers.values()|selectattr('score_pct','defined')|map(attribute='score_pct')|list %}
+  {% set avg = (scores|sum / scores|length)|round(1) if scores else 0 %}
+  {% set not_sub = [] %}
+  {% for n in range(1,total+1) %}{% if n|string not in answers %}{% set _ = not_sub.append(n) %}{% endif %}{% endfor %}
+
+  <!-- 요약 -->
+  <div class="section">
+    <div class="section-title">요약</div>
+    <div class="summary">
+      <div class="sbox sub"><div class="num">{{ submit_count }}</div><div class="lbl">제출</div></div>
+      <div class="sbox pend"><div class="num">{{ total - submit_count }}</div><div class="lbl">미제출</div></div>
+      <div class="sbox avg"><div class="num">{{ avg }}%</div><div class="lbl">평균 정답률</div></div>
+    </div>
+    {% if not_sub %}<div style="font-size:13px;color:#c62828;">미제출: {% for n in not_sub %}{{ n }}번{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% else %}<div style="font-size:13px;color:#2e7d32;font-weight:700;">전원 제출!</div>{% endif %}
+  </div>
+
+  <!-- 단어별 정답률 -->
+  <div class="section">
+    <div class="section-title">단어별 정답률</div>
+    {% for i, word in test.words | enumerate %}
+    {% set correct_cnt = [] %}
+    {% for v in answers.values() %}
+      {% if v.results is defined and v.results[i] is defined and v.results[i].is_right %}
+        {% set _ = correct_cnt.append(1) %}
+      {% endif %}
+    {% endfor %}
+    {% set rate = ((correct_cnt|length / submit_count * 100)|round(0)|int) if submit_count else 0 %}
+    <div class="word-stat">
+      <span class="ws-ko">{{ word.ko }}</span>
+      <span class="ws-en">{{ word.en }}</span>
+      <div class="ws-bar">
+        <div class="ws-fill" style="width:{{ rate }}%;background:{% if rate>=80 %}#43A047{% elif rate>=50 %}#FF9800{% else %}#E53935{% endif %}"></div>
+      </div>
+      <span class="ws-pct" style="color:{% if rate>=80 %}#43A047{% elif rate>=50 %}#FF9800{% else %}#E53935{% endif %}">{{ rate }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- 학생별 결과 -->
+  <div class="section">
+    <div class="section-title">학생별 결과</div>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>번호</th><th>점수</th>
+          {% for word in test.words %}<th>{{ word.ko }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in range(1, total+1) %}
+        {% set k = n|string %}
+        <tr>
+          <td>{{ n }}번 {% if k in answers %}<span class="badge-sub">제출</span>{% else %}<span class="badge-no">미제출</span>{% endif %}</td>
+          {% if k in answers %}
+          {% set rec = answers[k] %}
+          <td class="{{ 'score-high' if rec.score_pct >= 80 else ('score-mid' if rec.score_pct >= 50 else 'score-low') }}">
+            {{ rec.score }}/{{ rec.total }}
+          </td>
+          {% for i in range(test.words|length) %}
+          {% if rec.results is defined and rec.results[i] is defined %}
+            {% set r = rec.results[i] %}
+            {% if r.is_right %}<td><span class="cell-right">{{ r.student }}</span></td>
+            {% else %}<td><span class="cell-wrong">{{ r.student if r.student else '-' }}</span></td>
+            {% endif %}
+          {% else %}<td class="cell-empty">-</td>{% endif %}
+          {% endfor %}
+          {% else %}
+          <td colspan="{{ test.words|length + 1 }}" class="cell-empty">미제출</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>
