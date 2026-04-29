@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>퀴즈 결과 – {{ quiz.title }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #0D47A1; --sky: #4FC3F7; --green: #43A047; --red: #E53935; --orange: #FF6F00; --purple: #7B1FA2; --bg: #f0f4ff; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+  .topbar { background: var(--navy); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-family: 'Black Han Sans'; font-size: 18px; }
+  .back { background: rgba(255,255,255,.18); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; text-decoration: none; }
+  .main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+  .section { background: #fff; border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(13,71,161,.08); }
+  .section-title { font-family: 'Black Han Sans'; font-size: 16px; color: var(--navy); margin-bottom: 16px; }
+  .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .sbox { border-radius: 12px; padding: 14px 20px; text-align: center; }
+  .sbox .num { font-family: 'Black Han Sans'; font-size: 28px; }
+  .sbox .lbl { font-size: 12px; margin-top: 2px; }
+  .sbox.sub  { background: #e8f5e9; color: var(--green); }
+  .sbox.pend { background: #ffebee; color: var(--red); }
+  .q-block { border: 1.5px solid #e8eaf6; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .q-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .q-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .q-badge.short  { background: #e3f2fd; color: var(--navy); }
+  .q-badge.choice { background: #f3e5f5; color: var(--purple); }
+  .q-badge.ox     { background: #e8f5e9; color: var(--green); }
+  .q-badge.essay  { background: #fff3e0; color: var(--orange); }
+  .q-text { font-weight: 700; font-size: 14px; color: var(--navy); flex: 1; }
+  .ans-badge { padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .ans-badge.y { background: #e8f5e9; color: var(--green); }
+  .ans-badge.n { background: #f5f5f5; color: #aaa; }
+  .bar-wrap { margin-bottom: 6px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+  .bar { height: 16px; border-radius: 8px; background: #f0f0f0; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 8px; }
+  .ans-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .chip.c { background: #e8f5e9; color: var(--green); }
+  .chip.w { background: #ffebee; color: var(--red); }
+  .chip.n { background: #f0f0f0; color: #555; }
+  .chip .cn { font-size: 10px; opacity: .7; margin-right: 3px; }
+  .manual-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; margin-top: 6px; }
+  .manual-item { background: #fff8f0; border: 1px solid #ffe0b2; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  .manual-num { font-weight: 700; color: var(--orange); margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--navy); color: #fff; padding: 8px 6px; text-align: center; }
+  td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f8f9ff; }
+  .cr { background: #e8f5e9; color: var(--green); border-radius: 4px; padding: 2px 6px; font-weight: 700; }
+  .wr { background: #ffebee; color: var(--red); border-radius: 4px; padding: 2px 6px; }
+  .nk { background: #f5f5f5; color: #555; border-radius: 4px; padding: 2px 6px; }
+  .badge-sub { background: #e8f5e9; color: var(--green); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .badge-no  { background: #ffebee; color: var(--red); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📊 {{ quiz.title }} – 결과</h1>
+  <a href="/teacher" class="back">← 대시보드</a>
+</div>
+<div class="main">
+  {% set sc = answers|length %}
+  {% set nosub = not_submitted %}
+
+  <div class="section">
+    <div class="section-title">제출 현황</div>
+    <div class="summary">
+      <div class="sbox sub"><div class="num">{{ sc }}</div><div class="lbl">제출</div></div>
+      <div class="sbox pend"><div class="num">{{ total - sc }}</div><div class="lbl">미제출</div></div>
+    </div>
+    {% if nosub %}<div style="font-size:13px;color:#c62828;">미제출: {% for n in nosub %}{{ n }}번{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% else %}<div style="font-size:13px;color:#2e7d32;font-weight:700;">전원 제출!</div>{% endif %}
+  </div>
+
+  {% for i, q in quiz.questions | enumerate %}
+  {% set qi = i|string %}
+  <div class="section">
+    <div class="q-header">
+      {% if q.type == 'choice' %}<span class="q-badge choice">객관식</span>
+      {% elif q.type == 'ox' %}<span class="q-badge ox">OX</span>
+      {% elif q.type == 'essay' %}<span class="q-badge essay">서술형</span>
+      {% else %}<span class="q-badge short">단답형</span>{% endif %}
+      <span class="q-text">Q{{ i+1 }}. {{ q.text }}</span>
+      {% if q.answer %}<span class="ans-badge y">정답: {{ q.answer }}</span>
+      {% else %}<span class="ans-badge n">수동 확인</span>{% endif %}
+    </div>
+
+    {% if q.type == 'choice' and q.choices is defined %}
+      {% for c in q.choices %}
+      {% set cnt = namespace(v=0) %}
+      {% for v in answers.values() %}{% if v.answers.get(qi,'') == c %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+      {% set rate = ((cnt.v / sc * 100)|round(0)|int) if sc else 0 %}
+      <div class="bar-wrap">
+        <div class="bar-label">
+          <span style="font-weight:{{ '700' if c == q.answer else '400' }};color:{{ 'var(--green)' if c == q.answer else '#555' }};">{{ c }}{% if c == q.answer %} ✓{% endif %}</span>
+          <span>{{ cnt.v }}명 ({{ rate }}%)</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:{{ rate }}%;background:{{ 'var(--green)' if c == q.answer else 'var(--sky)' }};"></div></div>
+      </div>
+      {% endfor %}
+
+    {% elif q.type == 'ox' %}
+      {% for c in ['O','X'] %}
+      {% set cnt = namespace(v=0) %}
+      {% for v in answers.values() %}{% if v.answers.get(qi,'').upper() == c %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+      {% set rate = ((cnt.v / sc * 100)|round(0)|int) if sc else 0 %}
+      <div class="bar-wrap">
+        <div class="bar-label">
+          <span style="font-size:16px;font-weight:700;color:{{ 'var(--green)' if c == (q.answer|upper) else 'var(--red)' }};">{{ c }}{% if c == (q.answer|upper) %} ✓{% endif %}</span>
+          <span>{{ cnt.v }}명 ({{ rate }}%)</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:{{ rate }}%;background:{{ 'var(--green)' if c == 'O' else 'var(--red)' }};"></div></div>
+      </div>
+      {% endfor %}
+
+    {% elif q.answer %}
+      <div class="ans-chips">
+        {% for num, v in answers.items() %}
+        {% set s = v.answers.get(qi,'') %}
+        {% if s %}
+        <span class="chip {{ 'c' if s.lower() == q.answer.lower() else 'w' }}">
+          <span class="cn">{{ num }}번</span>{{ s }}
+        </span>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div class="manual-grid">
+        {% for num in range(1, total+1) %}
+        {% set k = num|string %}
+        {% if k in answers %}
+        <div class="manual-item">
+          <div class="manual-num">{{ num }}번</div>
+          <div>{{ answers[k].answers.get(qi,'(미입력)') }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="section">
+    <div class="section-title">전체 응답</div>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>번호</th><th>시각</th>
+        {% for i, q in quiz.questions | enumerate %}<th>Q{{ i+1 }}</th>{% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for n in range(1, total+1) %}{% set k = n|string %}<tr>
+          <td>{{ n }}번 {% if k in answers %}<span class="badge-sub">제출</span>{% else %}<span class="badge-no">미제출</span>{% endif %}</td>
+          {% if k in answers %}{% set rec = answers[k] %}
+          <td style="font-size:11px;color:#aaa;">{{ rec.submitted_at }}</td>
+          {% for i, q in quiz.questions | enumerate %}{% set s = rec.answers.get(i|string,'') %}
+            {% if not s %}<td class="nk" style="color:#ccc;">-</td>
+            {% elif not q.answer %}<td><span class="nk">{{ s }}</span></td>
+            {% elif s.lower() == q.answer.lower() %}<td><span class="cr">{{ s }}</span></td>
+            {% else %}<td><span class="wr">{{ s }}</span></td>
+            {% endif %}
+          {% endfor %}
+          {% else %}<td colspan="{{ quiz.questions|length + 1 }}" style="color:#ccc;">미제출</td>{% endif %}
+        </tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>
