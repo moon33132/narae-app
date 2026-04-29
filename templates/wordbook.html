@@ -86,6 +86,9 @@
 
   /* 카드 없음 */
   .no-day{text-align:center;padding:40px 16px;color:#aaa;font-size:15px;}
+  .tts-btn{background:none;border:none;cursor:pointer;font-size:20px;padding:4px 6px;border-radius:8px;transition:all .15s;vertical-align:middle;}
+  .tts-btn:hover{background:#e3f2fd;transform:scale(1.2);}
+  .tts-btn:active{transform:scale(.9);}
 
   /* ══ 모의시험 모드 ══ */
   #mode-test{display:none;}
@@ -282,7 +285,10 @@ function renderBook() {
   grid.innerHTML = words.map((w, i) => `
     <div class="word-card">
       <div class="word-num">${i+1}</div>
-      <div class="word-en">${w.en}</div>
+      <div class="word-en">
+        ${w.en}
+        <button class="tts-btn" onclick="event.stopPropagation();speak('${w.en.replace(/'/g, "\'")}')" title="발음 듣기">🔊</button>
+      </div>
       <div class="word-ko">${w.ko}</div>
     </div>`).join('');
 }
@@ -331,14 +337,16 @@ function showCard() {
     // 영어 보여주고 한글 맞추기
     document.getElementById('flashWord').textContent = w.en;
     document.getElementById('flashMeaning').textContent = w.ko;
-    document.getElementById('flashSub').textContent = '';
+    document.getElementById('flashSub').innerHTML = '<button class="tts-btn" onclick="event.stopPropagation();speak(\'' + w.en.replace(/'/g,"\\'") + '\')" style="font-size:28px;">🔊</button>';
     document.getElementById('flashHint').textContent = '영어 → 한글';
     document.getElementById('flashHintBack').textContent = '뜻 (한글)';
+    // 자동 발음
+    speak(w.en);
   } else {
     // 한글 보여주고 영어 맞추기
     document.getElementById('flashWord').textContent = w.ko;
     document.getElementById('flashMeaning').textContent = w.en;
-    document.getElementById('flashSub').textContent = '';
+    document.getElementById('flashSub').innerHTML = '<button class="tts-btn" onclick="event.stopPropagation();speak(\'' + w.en.replace(/'/g,"\\'") + '\')" style="font-size:28px;">🔊</button>';
     document.getElementById('flashHint').textContent = '한글 → 영어';
     document.getElementById('flashHintBack').textContent = '영어 단어';
   }
@@ -489,15 +497,19 @@ function checkAnswer() {
   input.className = 'test-input ' + (isRight ? 'correct' : 'wrong');
 
   const fb = document.getElementById('testFeedback');
+  // 항상 영어 발음 재생
+  const enWord = w.en;
   if (isRight) {
-    fb.innerHTML = '🎉 정답! <strong>' + correct + '</strong>';
+    fb.innerHTML = '🎉 정답! <strong>' + correct + '</strong> <button class="tts-btn" onclick="speak(\'' + enWord.replace(/'/g,"\\'") + '\')" style="font-size:18px;">🔊</button>';
     fb.className = 'test-feedback correct';
     testOk++;
+    speak(enWord);
   } else {
-    fb.innerHTML = '❌ 틀렸어요! 정답: <strong>' + correct + '</strong>';
+    fb.innerHTML = '❌ 틀렸어요! 정답: <strong>' + correct + '</strong> <button class="tts-btn" onclick="speak(\'' + enWord.replace(/'/g,"\\'") + '\')" style="font-size:18px;">🔊</button>';
     fb.className = 'test-feedback wrong';
     testNg++;
     testMissed.push(w);
+    speak(enWord);
   }
   fb.style.display = 'block';
 
@@ -560,6 +572,26 @@ document.addEventListener('keydown', e => {
   if (e.code === 'ArrowLeft' && isFlipped) markCard(false);
   if (e.code === 'ArrowRight' && isFlipped) markCard(true);
 });
+
+// ── Google TTS ───────────────────────────────────────
+function speak(text) {
+  if (!text) return;
+  // Google Translate TTS (무료, 별도 API키 불필요)
+  const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q='
+    + encodeURIComponent(text)
+    + '&tl=en&client=tw-ob';
+  const audio = new Audio(url);
+  audio.play().catch(() => {
+    // 브라우저 정책으로 막히면 Web Speech API 대체
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      u.rate = 0.9;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+  });
+}
 
 init();
 </script>

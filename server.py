@@ -704,6 +704,8 @@ def exams_path():        return os.path.join(DATA_DIR, "exams.json")
 def exam_answers_path(eid): return os.path.join(DATA_DIR, f"exam_answers_{eid}.json")
 def word_tests_path():   return os.path.join(DATA_DIR, "word_tests.json")
 def word_answers_path(wid): return os.path.join(DATA_DIR, f"word_answers_{wid}.json")
+def homework_path():     return os.path.join(DATA_DIR, f"homework_{date.today()}.json")
+def homework_items_path(): return os.path.join(DATA_DIR, "homework_items.json")
 
 def is_teacher():        return session.get("role") == "teacher"
 def get_student_num():   return session.get("student_num")
@@ -973,12 +975,15 @@ def teacher_dashboard():
         w["submit_count"] = len(ans)
         scores = [v["score_pct"] for v in ans.values() if "score_pct" in v]
         w["avg_score"] = round(sum(scores)/len(scores)) if scores else "-"
+    hw_items = load_json(homework_items_path(), [])
+    hw_today = load_json(homework_path(), {})
     return render_template("teacher.html",
         att=att, checked=checked, absent=absent,
         quizzes=quizzes, exams=exams,
         word_tests=word_tests, shared_files=shared_files,
         uploads=uploads, today=today_str(),
-        total=STUDENT_COUNT, registered=registered)
+        total=STUDENT_COUNT, registered=registered,
+        hw_items=hw_items, hw_today=hw_today)
 
 # ── 단어시험 만들기 ─────────────────────────────────
 @app.route("/teacher/word_test/add", methods=["POST"])
@@ -1129,25 +1134,29 @@ def quiz_add():
     title = request.form.get("title","").strip()
     if not title: return redirect(url_for("teacher_dashboard"))
     qs = []
-    i = 1
-    while True:
-        q_text = request.form.get(f"qq_text_{i}","").strip()
-        if not q_text: break
-        q_type   = request.form.get(f"qq_type_{i}", "short")
-        q_answer = request.form.get(f"qq_answer_{i}", "").strip()
-        # 객관식 선택지
+    # qq_text_N 키를 모두 수집해서 번호 순으로 정렬 처리 (삭제 후 재추가 시 번호 불연속 대응)
+    import re as _re
+    text_keys = sorted(
+        [k for k in request.form.keys() if _re.match(r"qq_text_\d+$", k)],
+        key=lambda k: int(_re.search(r"\d+$", k).group())
+    )
+    for key in text_keys:
+        q_text = request.form.get(key, "").strip()
+        if not q_text: continue
+        n = _re.search(r"\d+$", key).group()
+        q_type   = request.form.get(f"qq_type_{n}", "short")
+        q_answer = request.form.get(f"qq_answer_{n}", "").strip()
         choices = []
         for j in range(1, 6):
-            c = request.form.get(f"qq_choice_{i}_{j}", "").strip()
+            c = request.form.get(f"qq_choice_{n}_{j}", "").strip()
             if c: choices.append(c)
         q = {"text": q_text, "type": q_type, "answer": q_answer}
         if q_type == "choice" and choices:
             q["choices"] = choices
         elif q_type == "ox":
-            q["choices"] = ["O", "X"]  # OX는 항상 O/X 선택지
-            q["answer"] = ""            # OX는 정답 미리 입력 안 해도 됨
+            q["choices"] = ["O", "X"]
+            q["answer"] = ""
         qs.append(q)
-        i += 1
     if qs:
         qid = datetime.now().strftime("%Y%m%d%H%M%S")
         quizzes.append({"id":qid,"title":title,"questions":qs,
@@ -1190,13 +1199,17 @@ def exam_add():
     if not title: return redirect(url_for("teacher_dashboard"))
     # 문제/정답 파싱: q_text_1, q_ans_1, q_text_2, q_ans_2 ...
     questions = []
-    i = 1
-    while True:
-        q_text = request.form.get(f"q_text_{i}", "").strip()
-        if not q_text: break
-        q_ans  = request.form.get(f"q_ans_{i}", "").strip()
+    import re as _re
+    text_keys = sorted(
+        [k for k in request.form.keys() if _re.match(r"q_text_\d+$", k)],
+        key=lambda k: int(_re.search(r"\d+$", k).group())
+    )
+    for key in text_keys:
+        q_text = request.form.get(key, "").strip()
+        if not q_text: continue
+        n = _re.search(r"\d+$", key).group()
+        q_ans = request.form.get(f"q_ans_{n}", "").strip()
         questions.append({"text": q_text, "answer": q_ans})
-        i += 1
     if not questions: return redirect(url_for("teacher_dashboard"))
     eid = datetime.now().strftime("%Y%m%d%H%M%S")
     exams.append({"id":eid, "title":title,
@@ -1245,6 +1258,34 @@ def wordbook():
     num = get_student_num()
     if not num: return redirect(url_for("index"))
     return render_template("wordbook.html", num=num, word_days=WORD_DAYS)
+
+
+# ── 숙제 체크 ──────────────────────────────────────
+@app.route("/homework/check", methods=["POST"])
+def homework_check():
+    num = get_student_num()
+    if not num: return jsonify({"ok": False, "msg": "로그인 필요"})
+    data = request.get_json()
+    item_id = data.get("item_id", "")
+    checked = data.get("checked", False)
+    hw = load_json(homework_path(), {})
+    key = str(num)
+    if key not in hw: hw[key] = []
+    if checked and item_id not in hw[key]:
+        hw[key].append(item_id)
+    elif not checked and item_id in hw[key]:
+        hw[key].remove(item_id)
+    save_json(homework_path(), hw)
+    return jsonify({"ok": True})
+
+# ── 숙제 항목 관리 (선생님) ────────────────────────
+@app.route("/teacher/homework/save", methods=["POST"])
+def homework_save():
+    if not is_teacher(): return redirect(url_for("index"))
+    data = request.get_json()
+    items = data.get("items", [])
+    save_json(homework_items_path(), items)
+    return jsonify({"ok": True})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
