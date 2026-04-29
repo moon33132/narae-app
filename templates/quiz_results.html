@@ -107,14 +107,21 @@
       {% set cnt = namespace(v=0) %}
       {% for v in answers.values() %}{% if v.answers.get(qi,'').upper() == c %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
       {% set rate = ((cnt.v / sc * 100)|round(0)|int) if sc else 0 %}
+      {% set is_answer = q.answer and c == (q.answer|upper) %}
       <div class="bar-wrap">
         <div class="bar-label">
-          <span style="font-size:16px;font-weight:700;color:{{ 'var(--green)' if c == (q.answer|upper) else 'var(--red)' }};">{{ c }}{% if c == (q.answer|upper) %} ✓{% endif %}</span>
+          <span style="font-size:20px;font-weight:700;color:{{ 'var(--green)' if c == 'O' else 'var(--red)' }};">
+            {{ '⭕' if c == 'O' else '❌' }}
+            {% if is_answer %} ✓ 정답{% endif %}
+          </span>
           <span>{{ cnt.v }}명 ({{ rate }}%)</span>
         </div>
         <div class="bar"><div class="bar-fill" style="width:{{ rate }}%;background:{{ 'var(--green)' if c == 'O' else 'var(--red)' }};"></div></div>
       </div>
       {% endfor %}
+      {% if not q.answer %}
+      <div style="font-size:12px;color:#aaa;margin-top:4px;">※ 정답 미설정 – 선생님이 구두로 정답 확인</div>
+      {% endif %}
 
     {% elif q.answer %}
       <div class="ans-chips">
