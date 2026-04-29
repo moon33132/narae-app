@@ -171,28 +171,33 @@
 
     <!-- 숙제 관리 -->
     <div class="card">
-      <div class="card-title">📚 오늘의 숙제 관리</div>
-      <div id="hwTagList" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;min-height:28px;"></div>
-      <div class="hw-input-row">
-        <input type="text" id="hwInput" placeholder="숙제 이름 입력" style="flex:1;padding:7px 10px;font-size:13px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addHwItem();}">
-        <button class="btn btn-green" onclick="addHwItem()" style="white-space:nowrap;">추가</button>
+      <div class="card-title">📚 숙제 항목 이름 수정</div>
+      {% for item in hw_items %}
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:700;color:#5c6bc0;white-space:nowrap;">{{ loop.index }}.</span>
+        <input type="text" id="hw-name-{{ item.id }}" value="{{ item.name }}"
+          style="flex:1;padding:7px 10px;font-size:13px;border:1.5px solid #e0e0e0;border-radius:8px;outline:none;"
+          onfocus="this.style.borderColor='var(--sky)'" onblur="this.style.borderColor='#e0e0e0'">
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:4px;padding:8px;" onclick="saveHwItems()">💾 저장 (학생에게 표시)</button>
+      {% endfor %}
+      <button class="btn btn-primary" style="width:100%;margin-top:6px;padding:8px;" onclick="saveHwNames()">💾 이름 저장</button>
       <hr class="divider">
-      <div class="card-title" style="margin-bottom:8px;">✅ 오늘 완료 현황</div>
-      {% if hw_items %}
-        {% for item in hw_items %}
-        <div class="hw-hw-label">{{ item.name }}</div>
-        <div class="hw-status-grid">
-          {% for n in range(1, total+1) %}
-          {% set done = hw_today.get(n|string, []) %}
-          <div class="hw-status-badge" style="background:{{ '#e8f5e9' if item.id in done else '#ffebee' }};color:{{ '#2e7d32' if item.id in done else '#c62828' }};" title="{{ n }}번 {{ '완료' if item.id in done else '미완료' }}">{{ n }}</div>
-          {% endfor %}
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;color:var(--navy);">✅ 오늘 완료 현황</span>
+        <button class="btn" style="background:#ffebee;color:var(--red);border:1px solid #ef9a9a;font-size:11px;" onclick="resetHw()">초기화</button>
+      </div>
+      {% for item in hw_items %}
+      <div style="font-size:11px;font-weight:700;color:#555;margin:5px 0 3px;">{{ item.name }}</div>
+      <div class="hw-status-grid">
+        {% for n in range(1, total+1) %}
+        {% set done_list = hw_today.get(n|string, []) %}
+        {% set is_done = item.id in done_list %}
+        <div class="hw-status-badge"
+          style="background:{{ '#e8f5e9' if is_done else '#ffebee' }};color:{{ '#2e7d32' if is_done else '#c62828' }};"
+          title="{{ n }}번 {{ '완료' if is_done else '미완료' }}">{{ n }}</div>
         {% endfor %}
-      {% else %}
-        <p class="empty">숙제 항목이 없어요</p>
-      {% endif %}
+      </div>
+      {% endfor %}
     </div>
 
     <div class="card">
@@ -211,8 +216,9 @@
     <div class="card">
       <div class="tabs">
         <button class="tab-btn active" onclick="showTab('exam',this)">📋 단원평가</button>
-        <button class="tab-btn tq" onclick="showTab('quiz',this)">📝 퀴즈/설문</button>
+        <button class="tab-btn tq" onclick="showTab('quiz',this)">⭕ OX퀴즈</button>
         <button class="tab-btn tw" onclick="showTab('wt',this)">📖 단어시험</button>
+        <button class="tab-btn" onclick="showTab('board',this)" style="background:#fff8f0;border-color:#ffcc80;color:#e65100;">📌 게시판</button>
       </div>
 
       <!-- 단원평가 -->
@@ -239,14 +245,14 @@
         </div>{% endfor %}{% endif %}
       </div>
 
-      <!-- 퀴즈/설문 -->
+      <!-- OX 퀴즈 -->
       <div class="tab-panel" id="tab-quiz">
         <form method="post" action="/teacher/quiz/add">
-          <label class="flabel">제목</label>
-          <input type="text" name="title" placeholder="예) 깜짝 퀴즈 🎯" style="margin-bottom:10px;">
+          <label class="flabel">퀴즈 제목</label>
+          <input type="text" name="title" placeholder="예) 3단원 OX 퀴즈 🎯" style="margin-bottom:10px;">
           <div id="quizQList"></div>
-          <button type="button" class="btn-add btn-add-q" onclick="addQuizQ()">＋ 문제 추가</button>
-          <button type="submit" class="btn btn-purple btn-full">✅ 퀴즈 만들기</button>
+          <button type="button" class="btn-add btn-add-q" onclick="addQuizQ()">＋ OX 문제 추가</button>
+          <button type="submit" class="btn btn-purple btn-full">✅ OX 퀴즈 만들기</button>
         </form>
         {% if quizzes %}<hr class="divider">{% for q in quizzes %}
         <div class="item quiz">

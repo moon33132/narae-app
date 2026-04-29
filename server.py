@@ -707,6 +707,22 @@ def word_answers_path(wid): return os.path.join(DATA_DIR, f"word_answers_{wid}.j
 def homework_path():     return os.path.join(DATA_DIR, f"homework_{date.today()}.json")
 def homework_items_path(): return os.path.join(DATA_DIR, "homework_items.json")
 
+DEFAULT_HW_ITEMS = [
+    {"id": "hw_1", "name": "수학 숙제"},
+    {"id": "hw_2", "name": "국어 숙제"},
+    {"id": "hw_3", "name": "알림장"},
+]
+
+def get_hw_items():
+    items = load_json(homework_items_path(), None)
+    if items is None:
+        save_json(homework_items_path(), DEFAULT_HW_ITEMS)
+        return DEFAULT_HW_ITEMS
+    return items
+def board_path():          return os.path.join(DATA_DIR, "board_posts.json")
+BOARD_UPLOAD_DIR = os.path.join(BASE_DIR, "board_uploads")
+os.makedirs(BOARD_UPLOAD_DIR, exist_ok=True)
+
 def is_teacher():        return session.get("role") == "teacher"
 def get_student_num():   return session.get("student_num")
 def today_str():         return date.today().strftime("%Y년 %m월 %d일")
@@ -975,7 +991,7 @@ def teacher_dashboard():
         w["submit_count"] = len(ans)
         scores = [v["score_pct"] for v in ans.values() if "score_pct" in v]
         w["avg_score"] = round(sum(scores)/len(scores)) if scores else "-"
-    hw_items = load_json(homework_items_path(), [])
+    hw_items = get_hw_items()
     hw_today = load_json(homework_path(), {})
     return render_template("teacher.html",
         att=att, checked=checked, absent=absent,
@@ -1284,7 +1300,84 @@ def homework_save():
     if not is_teacher(): return redirect(url_for("index"))
     data = request.get_json()
     items = data.get("items", [])
-    save_json(homework_items_path(), items)
+    # 기존 id 유지하면서 이름만 업데이트
+    current = get_hw_items()
+    for i, item in enumerate(current):
+        if i < len(items):
+            item["name"] = items[i].get("name", item["name"])
+    save_json(homework_items_path(), current)
+    return jsonify({"ok": True})
+
+@app.route("/teacher/homework/reset", methods=["POST"])
+def homework_reset():
+    """오늘 숙제 체크 초기화"""
+    if not is_teacher(): return redirect(url_for("index"))
+    import os as _os
+    p = homework_path()
+    if _os.path.exists(p): _os.remove(p)
+    return jsonify({"ok": True})
+
+
+# ── 게시판 ────────────────────────────────────────
+@app.route("/board")
+def board():
+    num = get_student_num()
+    if not num and not is_teacher(): return redirect(url_for("index"))
+    posts = load_json(board_path(), [])
+    return render_template("board.html",
+        posts=posts, num=num, is_teacher=is_teacher(), total=STUDENT_COUNT)
+
+@app.route("/board/post", methods=["POST"])
+def board_post():
+    num = get_student_num()
+    if not num: return jsonify({"ok": False, "msg": "로그인 필요"})
+    content = request.form.get("content", "").strip()
+    image_url = ""
+    if "image" in request.files:
+        f = request.files["image"]
+        if f and f.filename:
+            ext = f.filename.rsplit(".",1)[-1].lower()
+            if ext in {"jpg","jpeg","png","gif","webp"}:
+                ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
+                fname = f"{num}번_{ts}.{ext}"
+                f.save(os.path.join(BOARD_UPLOAD_DIR, fname))
+                image_url = f"/board/image/{fname}"
+    if not content and not image_url:
+        return jsonify({"ok": False, "msg": "내용이나 사진을 추가해주세요"})
+    posts = load_json(board_path(), [])
+    posts.insert(0, {
+        "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
+        "num": num,
+        "content": content,
+        "image_url": image_url,
+        "created": datetime.now().strftime("%m/%d %H:%M")
+    })
+    save_json(board_path(), posts)
+    return jsonify({"ok": True, "msg": "게시 완료!"})
+
+@app.route("/board/image/<filename>")
+def board_image(filename):
+    return send_from_directory(BOARD_UPLOAD_DIR, filename)
+
+@app.route("/board/delete/<post_id>")
+def board_delete(post_id):
+    if not is_teacher() and not get_student_num(): return redirect(url_for("index"))
+    posts = load_json(board_path(), [])
+    num = get_student_num()
+    new_posts = []
+    for p in posts:
+        if p["id"] == post_id:
+            # 선생님이거나 본인 글만 삭제 가능
+            if is_teacher() or p["num"] == num:
+                if p.get("image_url"):
+                    fname = p["image_url"].split("/")[-1]
+                    fpath = os.path.join(BOARD_UPLOAD_DIR, fname)
+                    if os.path.exists(fpath): os.remove(fpath)
+                continue
+        new_posts.append(p)
+    save_json(board_path(), new_posts)
+    if is_teacher():
+        return redirect(url_for("board"))
     return jsonify({"ok": True})
 
 if __name__ == "__main__":

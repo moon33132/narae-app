@@ -105,8 +105,7 @@
 
 <div class="main">
 
-  <!-- 숙제 체크 -->
-  {% if hw_items %}
+  <!-- 숙제 체크 (항상 표시) -->
   <div class="section">
     <div class="section-title">📚 오늘의 숙제</div>
     <ul class="hw-list">
@@ -120,7 +119,6 @@
       {% endfor %}
     </ul>
   </div>
-  {% endif %}
 
   <!-- 단어시험 -->
   {% if active_word_tests %}

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나래반 게시판</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{--navy:#0D47A1;--sky:#4FC3F7;--green:#43A047;--red:#E53935;--bg:#E3F2FD;--yellow:#FFD600;--orange:#FF6F00;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);min-height:100vh;}
+  .topbar{background:var(--navy);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .topbar h1{font-family:'Black Han Sans';font-size:18px;}
+  .back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:5px 12px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;font-family:'Noto Sans KR';}
+  .main{max-width:680px;margin:0 auto;padding:16px;}
+
+  /* 글쓰기 카드 */
+  .write-card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 2px 12px rgba(13,71,161,.1);}
+  .write-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .my-badge{background:var(--navy);color:#fff;font-family:'Black Han Sans';font-size:14px;padding:5px 14px;border-radius:20px;}
+  .write-header span{font-size:13px;color:#888;}
+  textarea{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:12px;font-family:'Noto Sans KR';font-size:14px;outline:none;resize:none;min-height:80px;margin-bottom:10px;}
+  textarea:focus{border-color:var(--sky);}
+
+  /* 이미지 업로드 */
+  .img-upload-area{border:2px dashed #90caf9;border-radius:12px;padding:16px;text-align:center;cursor:pointer;background:#f0f8ff;margin-bottom:10px;transition:all .2s;}
+  .img-upload-area:hover{border-color:var(--sky);background:#e1f5fe;}
+  .img-upload-area input{display:none;}
+  .img-preview{width:100%;border-radius:10px;margin-bottom:10px;max-height:280px;object-fit:contain;display:none;}
+  .submit-btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--navy);color:#fff;font-family:'Black Han Sans';font-size:16px;cursor:pointer;letter-spacing:1px;}
+  .submit-btn:hover{background:#1565C0;}
+  .submit-btn:disabled{background:#ccc;cursor:default;}
+
+  /* 게시글 */
+  .post-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(13,71,161,.07);}
+  .post-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .post-num{background:var(--sky);color:var(--navy);font-family:'Black Han Sans';font-size:13px;padding:4px 12px;border-radius:20px;}
+  .post-time{font-size:11px;color:#aaa;}
+  .post-img{width:100%;border-radius:10px;margin-bottom:10px;max-height:360px;object-fit:contain;cursor:pointer;}
+  .post-content{font-size:14px;color:#333;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+  .post-footer{margin-top:10px;display:flex;justify-content:flex-end;gap:6px;}
+  .del-btn{background:#ffebee;color:var(--red);border:1px solid #ef9a9a;padding:4px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR';font-weight:700;}
+  .del-btn:hover{background:#ffcdd2;}
+
+  .empty-board{text-align:center;padding:48px 16px;color:#aaa;}
+  .empty-board .emoji{font-size:48px;display:block;margin-bottom:12px;}
+
+  /* 이미지 전체화면 */
+  .img-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:999;display:none;}
+  .img-modal.show{display:flex;}
+  .img-modal img{max-width:95vw;max-height:90vh;border-radius:10px;}
+  .img-modal-close{position:fixed;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;cursor:pointer;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;z-index:9999;white-space:nowrap;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📌 나래반 게시판</h1>
+  <a href="{{ '/teacher' if is_teacher else '/student' }}" class="back-btn">← 돌아가기</a>
+</div>
+
+<div class="main">
+
+  <!-- 글쓰기 (학생만) -->
+  {% if not is_teacher %}
+  <div class="write-card">
+    <div class="write-header">
+      <span class="my-badge">{{ num }}번</span>
+      <span>작품이나 생각을 올려보세요!</span>
+    </div>
+    <textarea id="writeContent" placeholder="내용을 입력하세요 (선택, 사진만 올려도 돼요)" rows="3"></textarea>
+
+    <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
+      <input type="file" id="imgInput" accept="image/*" capture="environment" onchange="previewImg(this)">
+      <img id="imgPreview" class="img-preview">
+      <div id="uploadHint">
+        <div style="font-size:28px;">📷</div>
+        <div style="font-size:13px;color:#5c6bc0;margin-top:6px;">사진 찍거나 파일 선택</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">카메라로 찍기 / 저장된 사진 선택</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitPost()">게시하기 📌</button>
+  </div>
+  {% endif %}
+
+  <!-- 게시글 목록 -->
+  {% if posts %}
+    {% for post in posts %}
+    <div class="post-card" id="post-{{ post.id }}">
+      <div class="post-header">
+        <span class="post-num">{{ post.num }}번</span>
+        <span class="post-time">{{ post.created }}</span>
+      </div>
+      {% if post.image_url %}
+      <img class="post-img" src="{{ post.image_url }}" onclick="openModal('{{ post.image_url }}')" alt="게시물 이미지">
+      {% endif %}
+      {% if post.content %}
+      <div class="post-content">{{ post.content }}</div>
+      {% endif %}
+      <div class="post-footer">
+        {% if is_teacher or post.num == num %}
+        <button class="del-btn" onclick="deletePost('{{ post.id }}', {{ 'true' if is_teacher else 'false' }})">삭제</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-board">
+      <span class="emoji">📭</span>
+      아직 게시물이 없어요.<br>첫 번째로 올려보세요!
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- 이미지 전체화면 모달 -->
+<div class="img-modal" id="imgModal" onclick="closeModal()">
+  <button class="img-modal-close" onclick="closeModal()">✕</button>
+  <img id="modalImg" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = ok ? '#1b5e20' : '#b71c1c';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function previewImg(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('imgPreview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    document.getElementById('uploadHint').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitPost() {
+  const content = document.getElementById('writeContent').value.trim();
+  const imgInput = document.getElementById('imgInput');
+  const file = imgInput.files[0];
+  if (!content && !file) {
+    showToast('내용이나 사진을 추가해주세요', false);
+    return;
+  }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '게시 중...';
+
+  const fd = new FormData();
+  fd.append('content', content);
+  if (file) fd.append('image', file);
+
+  const res = await fetch('/board/post', { method: 'POST', body: fd });
+  const data = await res.json();
+  showToast(data.msg, data.ok);
+  if (data.ok) {
+    setTimeout(() => location.reload(), 800);
+  } else {
+    btn.disabled = false;
+    btn.textContent = '게시하기 📌';
+  }
+}
+
+async function deletePost(postId, isTeacher) {
+  if (!confirm('삭제할까요?')) return;
+  if (isTeacher) {
+    location.href = '/board/delete/' + postId;
+  } else {
+    const res = await fetch('/board/delete/' + postId);
+    const data = await res.json();
+    showToast(data.msg, data.ok);
+    if (data.ok) {
+      const el = document.getElementById('post-' + postId);
+      if (el) el.remove();
+    }
+  }
+}
+
+function openModal(src) {
+  document.getElementById('modalImg').src = src;
+  document.getElementById('imgModal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('imgModal').classList.remove('show');
+}
+</script>
+</body>
+</html>
