@@ -1238,6 +1238,13 @@ def reset_student_pw(num):
     save_json(passwords_path(),pw)
     return redirect(url_for("teacher_dashboard"))
 
+
+@app.route("/wordbook")
+def wordbook():
+    num = get_student_num()
+    if not num: return redirect(url_for("index"))
+    return render_template("wordbook.html", num=num, word_days=WORD_DAYS)
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
