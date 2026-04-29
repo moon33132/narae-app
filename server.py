@@ -1141,10 +1141,11 @@ def quiz_add():
             c = request.form.get(f"qq_choice_{i}_{j}", "").strip()
             if c: choices.append(c)
         q = {"text": q_text, "type": q_type, "answer": q_answer}
-        if q_type in ("choice", "ox") and choices:
+        if q_type == "choice" and choices:
             q["choices"] = choices
         elif q_type == "ox":
-            q["choices"] = ["O", "X"]
+            q["choices"] = ["O", "X"]  # OX는 항상 O/X 선택지
+            q["answer"] = ""            # OX는 정답 미리 입력 안 해도 됨
         qs.append(q)
         i += 1
     if qs:
