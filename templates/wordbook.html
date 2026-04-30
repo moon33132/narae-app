@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>나래반 단어장</title>
+<title>{{ topic_name if topic_name else '영어단어장' }} – 나래반</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -120,7 +120,7 @@
 <body>
 
 <div class="topbar">
-  <h1>📖 단어장</h1>
+  <h1>{{ '📖' if not topic_name else ('🀄' if topic_name == '사자성어' else '💬') }} {{ topic_name if topic_name else '영어단어장' }}</h1>
   <a href="/student" class="back-btn">← 홈으로</a>
 </div>
 
@@ -226,7 +226,9 @@
 
 <script>
 // ── 단어 데이터 ──────────────────────────────────────
-const WORD_DAYS = {{ word_days | tojson }};
+const WORD_DAYS = {{ word_days | tojson if word_days else 'null' }};
+const STUDY_WORDS = {{ study_words | tojson if study_words else 'null' }};
+const TOPIC_NAME = "{{ topic_name if topic_name else '' }}";
 
 let currentDay = 1;
 let currentMode = 'book';
@@ -257,6 +259,7 @@ function setMode(mode) {
 }
 
 function selectDay(day) {
+  if (STUDY_WORDS) return;
   currentDay = day;
   updateDayTabs();
   if (currentMode === 'book') renderBook();
@@ -276,7 +279,7 @@ function updateDayTabs() {
 
 // ── 단어장 모드 ──────────────────────────────────────
 function renderBook() {
-  const words = WORD_DAYS[currentDay] || [];
+  const words = STUDY_WORDS || (WORD_DAYS ? WORD_DAYS[currentDay] : []) || [];
   const grid = document.getElementById('bookGrid');
   if (!words.length) {
     grid.innerHTML = '<div class="no-day">단어가 없어요.</div>';
@@ -295,7 +298,7 @@ function renderBook() {
 
 // ── 플래시카드 모드 ──────────────────────────────────
 function startFlash(wordList) {
-  const words = wordList || (WORD_DAYS[currentDay] || []);
+  const words = wordList || STUDY_WORDS || (WORD_DAYS ? WORD_DAYS[currentDay] : []) || [];
   if (!words.length) return;
 
   // 섞기
@@ -433,7 +436,7 @@ let testMissed = [];
 let testAnswered = false;
 
 function startTest(wordList) {
-  const words = wordList || (WORD_DAYS[currentDay] || []);
+  const words = wordList || STUDY_WORDS || (WORD_DAYS ? WORD_DAYS[currentDay] : []) || [];
   if (!words.length) return;
 
   // 섞기 + 방향 랜덤
@@ -593,6 +596,12 @@ function speak(text) {
   });
 }
 
+// study_words 모드
+if (STUDY_WORDS) {
+  document.getElementById('daySelector') && (document.getElementById('daySelector').style.display='none');
+  // Day 탭 없이 전체 단어 사용
+  currentDay = null;
+}
 init();
 </script>
 </body>
