@@ -698,7 +698,6 @@ def attendance_path(d=None):
     d = d or date.today().isoformat()
     return os.path.join(DATA_DIR, f"attendance_{d}.json")
 def notices_path():      return os.path.join(DATA_DIR, "notices.json")
-def notices_path():       return os.path.join(DATA_DIR, "notices.json")
 def quiz_path():         return os.path.join(DATA_DIR, "quizzes.json")
 def quiz_answers_path(qid): return os.path.join(DATA_DIR, f"answers_{qid}.json")
 def exams_path():        return os.path.join(DATA_DIR, "exams.json")
@@ -706,7 +705,6 @@ def exam_answers_path(eid): return os.path.join(DATA_DIR, f"exam_answers_{eid}.j
 def word_tests_path():   return os.path.join(DATA_DIR, "word_tests.json")
 def word_answers_path(wid): return os.path.join(DATA_DIR, f"word_answers_{wid}.json")
 def homework_path():     return os.path.join(DATA_DIR, f"homework_{date.today()}.json")
-def study_topics_path(): return os.path.join(DATA_DIR, "study_topics.json")
 def homework_items_path(): return os.path.join(DATA_DIR, "homework_items.json")
 
 DEFAULT_HW_ITEMS = [
@@ -726,27 +724,22 @@ def get_hw_items():
         if "id" not in item:
             item["id"] = f"hw_{i+1}"
     return items
-def boards_path():         return os.path.join(DATA_DIR, "boards.json")   # 게시판 목록
-def board_posts_path(bid): return os.path.join(DATA_DIR, f"board_{bid}.json")  # 게시판별 글
-BOARD_UPLOAD_DIR = os.path.join(BASE_DIR, "board_uploads")
-os.makedirs(BOARD_UPLOAD_DIR, exist_ok=True)
+def board_path():          return os.path.join(DATA_DIR, "board_posts.json")
+def board_config_path():   return os.path.join(DATA_DIR, "board_config.json")
 
-# 게시판 목록 메모리 캐시
-_boards_cache = None
+# 게시판 상태 메모리 캐시 (Railway 파일시스템 리셋 대응)
+_board_config_cache = None
 
-def get_boards():
-    global _boards_cache
-    if _boards_cache is None:
-        _boards_cache = load_json(boards_path(), [])
-    return _boards_cache
+def get_board_config():
+    global _board_config_cache
+    if _board_config_cache is None:
+        _board_config_cache = load_json(board_config_path(), {"open": True, "title": "게시판"})
+    return _board_config_cache
 
-def set_boards(boards):
-    global _boards_cache
-    _boards_cache = boards
-    save_json(boards_path(), boards)
-
-def get_board(bid):
-    return next((b for b in get_boards() if b["id"] == bid), None)
+def set_board_config(config):
+    global _board_config_cache
+    _board_config_cache = config
+    save_json(board_config_path(), config)
 BOARD_UPLOAD_DIR = os.path.join(BASE_DIR, "board_uploads")
 os.makedirs(BOARD_UPLOAD_DIR, exist_ok=True)
 
@@ -844,15 +837,12 @@ def student_dashboard():
     submitted_wt    = {w["id"] for w in word_tests if str(num) in load_json(word_answers_path(w["id"]),{})}
     hw_items       = get_hw_items()
     hw_done        = load_json(homework_path(), {}).get(str(num), [])
-    notices        = load_json(notices_path(), [])
-    study_topics   = get_study_topics()
-    open_boards    = [b for b in get_boards() if b.get("open")]
+    board_config   = get_board_config()
     return render_template("student.html", num=num,
         active_quizzes=quizzes, active_exams=active_exams,
         active_word_tests=active_wt, submitted_exams=submitted_exams,
         submitted_wt=submitted_wt, shared_files=shared_files, today=today_str(),
-        notices=notices, hw_items=hw_items, hw_done=hw_done,
-        open_boards=open_boards, study_topics=study_topics)
+        hw_items=hw_items, hw_done=hw_done, board_config=board_config)
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -1025,19 +1015,17 @@ def teacher_dashboard():
         w["submit_count"] = len(ans)
         scores = [v["score_pct"] for v in ans.values() if "score_pct" in v]
         w["avg_score"] = round(sum(scores)/len(scores)) if scores else "-"
-    notices  = load_json(notices_path(), [])
-    study_topics = get_study_topics()
     hw_items = get_hw_items()
     hw_today = load_json(homework_path(), {})
-    boards = get_boards()
+    board_config = get_board_config()
     return render_template("teacher.html",
         att=att, checked=checked, absent=absent,
         quizzes=quizzes, exams=exams,
         word_tests=word_tests, shared_files=shared_files,
         uploads=uploads, today=today_str(),
         total=STUDENT_COUNT, registered=registered,
-        notices=notices, hw_items=hw_items, hw_today=hw_today,
-        boards=boards, study_topics=study_topics)
+        hw_items=hw_items, hw_today=hw_today,
+        board_config=board_config)
 
 # ── 단어시험 만들기 ─────────────────────────────────
 @app.route("/teacher/word_test/add", methods=["POST"])
@@ -1252,15 +1240,18 @@ def exam_add():
     title = request.form.get("title","").strip()
     if not title: return redirect(url_for("teacher_dashboard"))
     # 문제/정답 파싱: q_text_1, q_ans_1, q_text_2, q_ans_2 ...
-    # OMR 방식: 문항수 + 정답만 입력
+    questions = []
     import re as _re
-    q_count = int(request.form.get("question_count", 20))
-    answer_key = {}
-    for i in range(1, q_count + 1):
-        ans = request.form.get(f"ans_{i}", "").strip()
-        if ans:
-            answer_key[str(i)] = ans
-    questions = [{"text": f"{i}번", "answer": answer_key.get(str(i), "")} for i in range(1, q_count + 1)]
+    text_keys = sorted(
+        [k for k in request.form.keys() if _re.match(r"q_text_\d+$", k)],
+        key=lambda k: int(_re.search(r"\d+$", k).group())
+    )
+    for key in text_keys:
+        q_text = request.form.get(key, "").strip()
+        if not q_text: continue
+        n = _re.search(r"\d+$", key).group()
+        q_ans = request.form.get(f"q_ans_{n}", "").strip()
+        questions.append({"text": q_text, "answer": q_ans})
     if not questions: return redirect(url_for("teacher_dashboard"))
     eid = datetime.now().strftime("%Y%m%d%H%M%S")
     exams.append({"id":eid, "title":title,
@@ -1311,25 +1302,6 @@ def wordbook():
     return render_template("wordbook.html", num=num, word_days=WORD_DAYS)
 
 
-
-# ── 공지사항 ───────────────────────────────────────────
-@app.route("/teacher/notice/add", methods=["POST"])
-def notice_add():
-    if not is_teacher(): return redirect(url_for("index"))
-    notices = load_json(notices_path(), [])
-    content = request.form.get("content","").strip()
-    if content:
-        notices.insert(0, {"id": datetime.now().strftime("%Y%m%d%H%M%S"),
-            "content": content, "date": datetime.now().strftime("%m/%d %H:%M")})
-        save_json(notices_path(), notices)
-    return redirect(url_for("teacher_dashboard"))
-
-@app.route("/teacher/notice/delete/<nid>")
-def notice_delete(nid):
-    if not is_teacher(): return redirect(url_for("index"))
-    save_json(notices_path(), [n for n in load_json(notices_path(),[]) if n["id"]!=nid])
-    return redirect(url_for("teacher_dashboard"))
-
 # ── 숙제 체크 ──────────────────────────────────────
 @app.route("/homework/check", methods=["POST"])
 def homework_check():
@@ -1372,111 +1344,7 @@ def homework_reset():
     return jsonify({"ok": True})
 
 
-# ── 다중 게시판 ───────────────────────────────────────
-@app.route("/boards")
-def boards_list():
-    num = get_student_num()
-    if not num and not is_teacher(): return redirect(url_for("index"))
-    boards = get_boards()
-    # 학생은 열린 게시판만
-    if not is_teacher():
-        boards = [b for b in boards if b.get("open")]
-    return render_template("boards.html", boards=boards, is_teacher=is_teacher(), num=num)
-
-@app.route("/board/<bid>")
-def board(bid):
-    num = get_student_num()
-    if not num and not is_teacher(): return redirect(url_for("index"))
-    b = get_board(bid)
-    if not b: return redirect(url_for("boards_list"))
-    if not is_teacher() and not b.get("open"): return redirect(url_for("student_dashboard"))
-    posts = load_json(board_posts_path(bid), [])
-    return render_template("board.html", posts=posts, num=num,
-        is_teacher=is_teacher(), board=b)
-
-@app.route("/board/<bid>/post", methods=["POST"])
-def board_post(bid):
-    num = get_student_num()
-    if not num: return jsonify({"ok": False, "msg": "로그인 필요"})
-    b = get_board(bid)
-    if not b or not b.get("open"): return jsonify({"ok": False, "msg": "닫힌 게시판이에요"})
-    content = request.form.get("content", "").strip()
-    image_url = ""
-    if "image" in request.files:
-        f = request.files["image"]
-        if f and f.filename:
-            ext = f.filename.rsplit(".",1)[-1].lower()
-            if ext in {"jpg","jpeg","png","gif","webp"}:
-                ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
-                fname = f"{num}번_{ts}.{ext}"
-                f.save(os.path.join(BOARD_UPLOAD_DIR, fname))
-                image_url = f"/board_image/{fname}"
-    if not content and not image_url:
-        return jsonify({"ok": False, "msg": "내용이나 사진을 추가해주세요"})
-    posts = load_json(board_posts_path(bid), [])
-    posts.insert(0, {"id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
-        "num": num, "content": content, "image_url": image_url,
-        "created": datetime.now().strftime("%m/%d %H:%M")})
-    save_json(board_posts_path(bid), posts)
-    return jsonify({"ok": True})
-
-@app.route("/board/<bid>/delete/<pid>")
-def board_delete(bid, pid):
-    if not get_student_num() and not is_teacher(): return redirect(url_for("index"))
-    num = get_student_num()
-    posts = load_json(board_posts_path(bid), [])
-    new_posts = []
-    for p in posts:
-        if p["id"] == pid:
-            if is_teacher() or p["num"] == num:
-                if p.get("image_url"):
-                    fname = p["image_url"].split("/")[-1]
-                    fpath = os.path.join(BOARD_UPLOAD_DIR, fname)
-                    if os.path.exists(fpath): os.remove(fpath)
-                continue
-        new_posts.append(p)
-    save_json(board_posts_path(bid), new_posts)
-    return jsonify({"ok": True})
-
-@app.route("/board_image/<filename>")
-def board_image(filename):
-    return send_from_directory(BOARD_UPLOAD_DIR, filename)
-
-# ── 게시판 관리 (선생님) ───────────────────────────────
-@app.route("/teacher/board/add", methods=["POST"])
-def board_add():
-    if not is_teacher(): return jsonify({"ok": False})
-    data = request.get_json()
-    title = data.get("title","").strip()
-    if not title: return jsonify({"ok": False, "msg": "제목을 입력해주세요"})
-    boards = get_boards()
-    bid = datetime.now().strftime("%Y%m%d%H%M%S%f")
-    boards.append({"id": bid, "title": title, "open": True,
-                   "created": datetime.now().strftime("%m/%d")})
-    set_boards(boards)
-    return jsonify({"ok": True, "board": boards[-1]})
-
-@app.route("/teacher/board/toggle/<bid>", methods=["POST"])
-def board_toggle(bid):
-    if not is_teacher(): return jsonify({"ok": False})
-    boards = get_boards()
-    for b in boards:
-        if b["id"] == bid:
-            b["open"] = not b.get("open", True)
-            set_boards(boards)
-            return jsonify({"ok": True, "open": b["open"]})
-    return jsonify({"ok": False})
-
-@app.route("/teacher/board/delete/<bid>", methods=["POST"])
-def board_delete_board(bid):
-    if not is_teacher(): return jsonify({"ok": False})
-    boards = [b for b in get_boards() if b["id"] != bid]
-    set_boards(boards)
-    p = board_posts_path(bid)
-    if os.path.exists(p): os.remove(p)
-    return jsonify({"ok": True})
-
-
+# ── 게시판 ────────────────────────────────────────
 @app.route("/board")
 def board():
     num = get_student_num()
@@ -1550,154 +1418,6 @@ def board_delete(post_id):
         new_posts.append(p)
     save_json(board_path(), new_posts)
     return jsonify({"ok": True})
-
-
-# ── 학습 주제 데이터 ──────────────────────────────────
-STUDY_TOPICS_DATA = {
-    "사자성어": [
-        {"ko":"일석이조","en":"一石二鳥 (일석이조) - 돌 하나로 새 두 마리"},
-        {"ko":"이심전심","en":"以心傳心 (이심전심) - 마음에서 마음으로 전함"},
-        {"ko":"오매불망","en":"寤寐不忘 (오매불망) - 자나깨나 잊지 못함"},
-        {"ko":"자업자득","en":"自業自得 (자업자득) - 자기가 한 일의 결과를 자기가 받음"},
-        {"ko":"천고마비","en":"天高馬肥 (천고마비) - 하늘은 높고 말은 살찐다"},
-        {"ko":"동문서답","en":"東問西答 (동문서답) - 묻는 말에 엉뚱한 대답"},
-        {"ko":"유비무환","en":"有備無患 (유비무환) - 준비하면 걱정이 없다"},
-        {"ko":"금상첨화","en":"錦上添花 (금상첨화) - 좋은 것 위에 더 좋은 것"},
-        {"ko":"청출어람","en":"靑出於藍 (청출어람) - 제자가 스승보다 나음"},
-        {"ko":"마이동풍","en":"馬耳東風 (마이동풍) - 남의 말을 귀담아듣지 않음"},
-        {"ko":"오합지졸","en":"烏合之卒 (오합지졸) - 규율 없이 모인 무리"},
-        {"ko":"사면초가","en":"四面楚歌 (사면초가) - 사방이 적에게 둘러싸임"},
-        {"ko":"다다익선","en":"多多益善 (다다익선) - 많으면 많을수록 좋다"},
-        {"ko":"지피지기","en":"知彼知己 (지피지기) - 상대와 자신을 모두 앎"},
-        {"ko":"우공이산","en":"愚公移山 (우공이산) - 꾸준히 노력하면 이룬다"},
-        {"ko":"백문불여일견","en":"百聞不如一見 (백문불여일견) - 백 번 듣는 것이 한 번 보는 것만 못함"},
-        {"ko":"설상가상","en":"雪上加霜 (설상가상) - 엎친 데 덮친 격"},
-        {"ko":"오리무중","en":"五里霧中 (오리무중) - 갈피를 못 잡는 상태"},
-        {"ko":"임기응변","en":"臨機應變 (임기응변) - 상황에 맞게 대처함"},
-        {"ko":"호연지기","en":"浩然之氣 (호연지기) - 넓고 큰 도덕적 기개"},
-        {"ko":"절치부심","en":"切齒腐心 (절치부심) - 몹시 분하여 이를 갊"},
-        {"ko":"반포지효","en":"反哺之孝 (반포지효) - 자식이 부모에게 효도함"},
-        {"ko":"와신상담","en":"臥薪嘗膽 (와신상담) - 원수를 갚기 위해 고생을 참음"},
-        {"ko":"전화위복","en":"轉禍爲福 (전화위복) - 재앙이 오히려 복이 됨"},
-        {"ko":"각골난망","en":"刻骨難忘 (각골난망) - 뼈에 새겨 잊기 어려움"},
-        {"ko":"고진감래","en":"苦盡甘來 (고진감래) - 고생 끝에 낙이 옴"},
-        {"ko":"낙화유수","en":"落花流水 (낙화유수) - 떨어지는 꽃과 흐르는 물"},
-        {"ko":"명실상부","en":"名實相符 (명실상부) - 이름과 실제가 일치함"},
-        {"ko":"무릉도원","en":"武陵桃源 (무릉도원) - 이상적인 별천지"},
-        {"ko":"부화뇌동","en":"附和雷同 (부화뇌동) - 줏대 없이 남을 따름"},
-        {"ko":"살신성인","en":"殺身成仁 (살신성인) - 목숨을 바쳐 의를 이룸"},
-        {"ko":"수적천석","en":"水滴穿石 (수적천석) - 작은 노력이 큰 일을 이룸"},
-        {"ko":"시기상조","en":"時機尙早 (시기상조) - 아직 때가 이르다"},
-        {"ko":"십중팔구","en":"十中八九 (십중팔구) - 거의 틀림없이"},
-        {"ko":"아전인수","en":"我田引水 (아전인수) - 자기에게 유리하게 해석함"},
-        {"ko":"양두구육","en":"羊頭狗肉 (양두구육) - 겉과 속이 다름"},
-        {"ko":"역지사지","en":"易地思之 (역지사지) - 처지를 바꿔서 생각함"},
-        {"ko":"온고지신","en":"溫故知新 (온고지신) - 옛것을 익혀 새것을 앎"},
-        {"ko":"위기일발","en":"危機一髮 (위기일발) - 아슬아슬한 위기 상황"},
-        {"ko":"이구동성","en":"異口同聲 (이구동성) - 여럿이 한목소리로 말함"},
-        {"ko":"일취월장","en":"日就月將 (일취월장) - 나날이 발전함"},
-        {"ko":"자포자기","en":"自暴自棄 (자포자기) - 스스로 포기함"},
-        {"ko":"적반하장","en":"賊反荷杖 (적반하장) - 잘못한 사람이 오히려 큰소리침"},
-        {"ko":"조삼모사","en":"朝三暮四 (조삼모사) - 눈앞의 이익만 따져 속임"},
-        {"ko":"진퇴양난","en":"進退兩難 (진퇴양난) - 어느 쪽도 선택 못 하는 상황"},
-        {"ko":"초지일관","en":"初志一貫 (초지일관) - 처음 뜻을 끝까지 지킴"},
-        {"ko":"칠전팔기","en":"七顚八起 (칠전팔기) - 일곱 번 넘어져도 여덟 번 일어남"},
-        {"ko":"타산지석","en":"他山之石 (타산지석) - 남의 실패에서 교훈을 얻음"},
-        {"ko":"표리부동","en":"表裏不同 (표리부동) - 겉과 속이 다름"},
-        {"ko":"허심탄회","en":"虛心坦懷 (허심탄회) - 거리낌 없이 솔직함"},
-    ],
-    "속담": [
-        {"ko":"가는 말이 고와야 오는 말이 곱다","en":"뜻: 내가 먼저 잘 대해야 상대도 잘 대해준다"},
-        {"ko":"공든 탑이 무너지랴","en":"뜻: 정성껏 한 일은 쉽게 무너지지 않는다"},
-        {"ko":"낫 놓고 기역자도 모른다","en":"뜻: 아주 무식함을 이름"},
-        {"ko":"돌다리도 두드려 보고 건너라","en":"뜻: 확실해도 조심해서 행동하라"},
-        {"ko":"등잔 밑이 어둡다","en":"뜻: 가까이 있는 것을 오히려 모른다"},
-        {"ko":"말 한마디에 천냥 빚도 갚는다","en":"뜻: 말을 잘하면 어려운 일도 해결된다"},
-        {"ko":"배보다 배꼽이 더 크다","en":"뜻: 기본보다 부수적인 것이 더 큰 경우"},
-        {"ko":"세 살 버릇 여든까지 간다","en":"뜻: 어릴 때 습관이 평생 간다"},
-        {"ko":"아니 땐 굴뚝에 연기 나랴","en":"뜻: 원인 없이 결과가 생기지 않는다"},
-        {"ko":"원숭이도 나무에서 떨어진다","en":"뜻: 잘하는 사람도 실수할 때가 있다"},
-        {"ko":"우물 안 개구리","en":"뜻: 견문이 좁아 세상 물정을 모름"},
-        {"ko":"천리 길도 한 걸음부터","en":"뜻: 무슨 일이든 시작이 중요하다"},
-        {"ko":"콩 심은 데 콩 나고 팥 심은 데 팥 난다","en":"뜻: 원인에 따라 결과가 달라진다"},
-        {"ko":"티끌 모아 태산","en":"뜻: 작은 것도 모이면 커진다"},
-        {"ko":"하늘이 무너져도 솟아날 구멍이 있다","en":"뜻: 아무리 어려워도 살길이 있다"},
-        {"ko":"가재는 게 편이다","en":"뜻: 처지가 같으면 서로 돕는다"},
-        {"ko":"고양이 목에 방울 달기","en":"뜻: 실행하기 어려운 일"},
-        {"ko":"꿩 먹고 알 먹고","en":"뜻: 한 번에 두 가지 이익을 얻는 것"},
-        {"ko":"남의 떡이 더 커 보인다","en":"뜻: 남의 것이 항상 더 좋아 보인다"},
-        {"ko":"다 된 밥에 재 뿌리기","en":"뜻: 다 된 일을 망치는 것"},
-        {"ko":"도토리 키 재기","en":"뜻: 비슷한 것끼리 우열을 다툼"},
-        {"ko":"땅 짚고 헤엄치기","en":"뜻: 아주 쉬운 일"},
-        {"ko":"로마는 하루아침에 이루어지지 않았다","en":"뜻: 큰 일은 오랜 시간이 필요하다"},
-        {"ko":"모로 가도 서울만 가면 된다","en":"뜻: 방법이 달라도 목적만 이루면 된다"},
-        {"ko":"믿는 도끼에 발등 찍힌다","en":"뜻: 믿었던 사람에게 배신당한다"},
-        {"ko":"발 없는 말이 천 리 간다","en":"뜻: 말은 빠르게 퍼진다"},
-        {"ko":"백지장도 맞들면 낫다","en":"뜻: 쉬운 일도 협력하면 더 잘된다"},
-        {"ko":"빈 수레가 요란하다","en":"뜻: 실속 없는 사람이 더 떠든다"},
-        {"ko":"사공이 많으면 배가 산으로 간다","en":"뜻: 의견이 너무 많으면 일이 안 된다"},
-        {"ko":"소 잃고 외양간 고친다","en":"뜻: 일이 잘못된 후에야 대책을 세운다"},
-        {"ko":"식은 죽 먹기","en":"뜻: 매우 쉬운 일"},
-        {"ko":"열 번 찍어 안 넘어가는 나무 없다","en":"뜻: 끈질기게 노력하면 이루어진다"},
-        {"ko":"오르지 못할 나무는 쳐다보지도 마라","en":"뜻: 불가능한 일은 처음부터 시도하지 마라"},
-        {"ko":"우물을 파도 한 우물을 파라","en":"뜻: 한 가지 일을 꾸준히 하라"},
-        {"ko":"작은 고추가 맵다","en":"뜻: 작아도 역할이나 실력이 뛰어나다"},
-        {"ko":"제 눈에 안경","en":"뜻: 자기 마음에 들면 다 좋아 보인다"},
-        {"ko":"지렁이도 밟으면 꿈틀한다","en":"뜻: 아무리 순한 사람도 억울하면 반항한다"},
-        {"ko":"첫술에 배부르랴","en":"뜻: 처음부터 큰 성과를 바랄 수 없다"},
-        {"ko":"하룻강아지 범 무서운 줄 모른다","en":"뜻: 철없이 함부로 덤빈다"},
-        {"ko":"호랑이도 제 말 하면 온다","en":"뜻: 이야기를 하면 그 사람이 나타난다"},
-        {"ko":"가는 날이 장날","en":"뜻: 뜻하지 않게 일이 잘 맞아떨어진다"},
-        {"ko":"개구리 올챙이 적 생각 못 한다","en":"뜻: 자신의 지난 어려운 처지를 잊는다"},
-        {"ko":"고생 끝에 낙이 온다","en":"뜻: 힘든 일을 견디면 좋은 일이 생긴다"},
-        {"ko":"구슬이 서 말이라도 꿰어야 보배","en":"뜻: 아무리 좋아도 쓸모 있게 해야 가치 있다"},
-        {"ko":"급할수록 돌아가라","en":"뜻: 급할 때일수록 서두르지 말고 차분히 하라"},
-        {"ko":"나중에 온 이가 먼저 간다","en":"뜻: 나중에 온 사람이 먼저 성공하기도 한다"},
-        {"ko":"뜻이 있는 곳에 길이 있다","en":"뜻: 의지가 있으면 방법이 생긴다"},
-        {"ko":"매도 먼저 맞는 게 낫다","en":"뜻: 불가피한 일은 빨리 끝내는 게 낫다"},
-        {"ko":"빛 좋은 개살구","en":"뜻: 겉만 좋고 속은 별로인 것"},
-        {"ko":"아는 길도 물어 가라","en":"뜻: 확실한 것도 다시 확인하라"},
-    ]
-}
-
-_study_topics_cache = None
-
-def get_study_topics():
-    global _study_topics_cache
-    if _study_topics_cache is None:
-        saved = load_json(study_topics_path(), {})
-        _study_topics_cache = saved if saved else {"영어단어": True, "사자성어": False, "속담": False}
-    return _study_topics_cache
-
-def set_study_topics(topics):
-    global _study_topics_cache
-    _study_topics_cache = topics
-    save_json(study_topics_path(), topics)
-
-
-# ── 학습 주제 ─────────────────────────────────────────
-@app.route("/study/<topic>")
-def study_topic(topic):
-    num = get_student_num()
-    if not num: return redirect(url_for("index"))
-    topics = get_study_topics()
-    if topic not in STUDY_TOPICS_DATA:
-        return redirect(url_for("student_dashboard"))
-    words = STUDY_TOPICS_DATA[topic]
-    return render_template("wordbook.html", num=num,
-        word_days=None, study_words=words, topic_name=topic,
-        back_url="/student")
-
-@app.route("/teacher/study/toggle", methods=["POST"])
-def study_toggle():
-    if not is_teacher(): return jsonify({"ok": False})
-    data = request.get_json()
-    topic = data.get("topic")
-    if topic not in STUDY_TOPICS_DATA: return jsonify({"ok": False})
-    topics = get_study_topics()
-    topics[topic] = not topics.get(topic, False)
-    set_study_topics(topics)
-    return jsonify({"ok": True, "active": topics[topic]})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

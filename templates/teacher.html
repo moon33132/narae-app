@@ -214,30 +214,20 @@
   <!-- 오른쪽 -->
   <div class="content">
     <div class="card">
-      <div class="tabs" style="flex-wrap:wrap;">
+      <div class="tabs">
         <button class="tab-btn active" onclick="showTab('exam',this)">📋 단원평가</button>
-        <button class="tab-btn" onclick="showTab('notice',this)" style="background:#e3f2fd;border-color:#90caf9;color:var(--navy);">📢 공지</button>
+        <button class="tab-btn tq" onclick="showTab('quiz',this)">⭕ OX퀴즈</button>
         <button class="tab-btn tw" onclick="showTab('wt',this)">📖 단어시험</button>
-        <button class="tab-btn" onclick="showTab('study',this)" style="background:#f3e5f5;border-color:#ce93d8;color:var(--purple);">📚 학습</button>
         <button class="tab-btn" onclick="showTab('board',this)" style="background:#fff8f0;border-color:#ffcc80;color:#e65100;">📌 게시판</button>
       </div>
 
-      <!-- 단원평가 (OMR 방식) -->
+      <!-- 단원평가 -->
       <div class="tab-panel active" id="tab-exam">
-        <form method="post" action="/teacher/exam/add" id="examForm">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-            <div><label class="flabel">시험 제목</label><input type="text" name="title" placeholder="예) 과학 4단원 평가 2회"></div>
-            <div><label class="flabel">문항 수</label>
-              <select name="question_count" id="qCountSel" onchange="renderOMR(this.value)" style="padding:8px 10px;">
-                <option value="10">10문항</option>
-                <option value="20" selected>20문항</option>
-                <option value="25">25문항</option>
-                <option value="30">30문항</option>
-              </select>
-            </div>
-          </div>
-          <p style="font-size:11px;color:#888;margin-bottom:8px;">※ 시험지는 종이로 배부 → 학생이 번호만 입력 → 자동 채점</p>
-          <div id="omrGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;"></div>
+        <form method="post" action="/teacher/exam/add">
+          <label class="flabel">시험 제목</label>
+          <input type="text" name="title" placeholder="예) 과학 4단원 평가 2회" style="margin-bottom:10px;">
+          <div id="examQList"></div>
+          <button type="button" class="btn-add" onclick="addExamQ()">＋ 문제 추가</button>
           <button type="submit" class="btn btn-primary btn-full">✅ 시험 만들기</button>
         </form>
         {% if exams %}<hr class="divider">{% for e in exams %}
@@ -255,20 +245,28 @@
         </div>{% endfor %}{% endif %}
       </div>
 
-      <!-- 공지사항 탭 -->
-      <div class="tab-panel" id="tab-notice">
-        <form method="post" action="/teacher/notice/add">
-          <label class="flabel">공지 내용</label>
-          <textarea name="content" rows="3" placeholder="공지사항, 링크, 안내문 등" style="margin-bottom:8px;"></textarea>
-          <button type="submit" class="btn btn-primary" style="width:100%;padding:11px;">📢 공지 등록</button>
+      <!-- OX 퀴즈 -->
+      <div class="tab-panel" id="tab-quiz">
+        <form method="post" action="/teacher/quiz/add">
+          <label class="flabel">퀴즈 제목</label>
+          <input type="text" name="title" placeholder="예) 3단원 OX 퀴즈 🎯" style="margin-bottom:10px;">
+          <div id="quizQList"></div>
+          <button type="button" class="btn-add btn-add-q" onclick="addQuizQ()">＋ OX 문제 추가</button>
+          <button type="submit" class="btn btn-purple btn-full">✅ OX 퀴즈 만들기</button>
         </form>
-        {% if notices %}<hr class="divider">
-        {% for n in notices %}
-        <div style="border-left:4px solid var(--sky);padding:10px 14px;background:#f0f8ff;border-radius:0 10px 10px 0;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <div style="flex:1;font-size:13px;line-height:1.6;">{{ n.content }}<div style="font-size:11px;color:#aaa;margin-top:3px;">{{ n.date }}</div></div>
-          <a href="/teacher/notice/delete/{{ n.id }}"><button class="btn btn-danger">삭제</button></a>
-        </div>
-        {% endfor %}{% endif %}
+        {% if quizzes %}<hr class="divider">{% for q in quizzes %}
+        <div class="item quiz">
+          <div class="item-hd">
+            <span class="item-title">📝 {{ q.title }}</span>
+            <span class="badge {{ 'badge-on' if q.active else 'badge-off' }}">{{ '진행중' if q.active else '종료' }}</span>
+          </div>
+          <div class="item-meta">{{ q.created }} · {{ q.questions|length }}문항 · 제출 {{ q.submit_count }}/{{ total }}</div>
+          <div class="item-acts">
+            <a href="/teacher/quiz/{{ q.id }}/results"><button class="btn btn-primary">결과</button></a>
+            <a href="/teacher/quiz/toggle/{{ q.id }}"><button class="btn btn-warn">{{ '종료' if q.active else '재개' }}</button></a>
+            <a href="/teacher/quiz/delete/{{ q.id }}" onclick="return confirm('삭제?')"><button class="btn btn-danger">삭제</button></a>
+          </div>
+        </div>{% endfor %}{% endif %}
       </div>
 
       <!-- 단어시험 -->
@@ -317,64 +315,36 @@
         </div>{% endfor %}{% endif %}
       </div>
 
-      <!-- 학습 주제 탭 -->
-      <div class="tab-panel" id="tab-study">
-        <p style="font-size:12px;color:#888;margin-bottom:12px;">토글을 켜면 학생 홈 화면에 해당 학습 탭이 나타나요</p>
-        {% for topic_name, words in [('영어단어', none), ('사자성어', none), ('속담', none)] %}
-        {% set is_active = study_topics.get(topic_name, false) %}
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:{{ '#e8f5e9' if is_active else '#f9f9f9' }};border-radius:12px;margin-bottom:8px;border:1.5px solid {{ '#a5d6a7' if is_active else '#e0e0e0' }};">
-          <div>
-            <div style="font-weight:700;font-size:14px;color:var(--navy);">
-              {% if topic_name == '영어단어' %}📖{% elif topic_name == '사자성어' %}🀄{% else %}💬{% endif %}
-              {{ topic_name }}
-            </div>
-            <div style="font-size:11px;color:#888;margin-top:2px;">
-              {% if topic_name == '영어단어' %}Day 1~30, 600단어
-              {% elif topic_name == '사자성어' %}50개
-              {% else %}50개{% endif %}
-            </div>
-          </div>
-          <div onclick="toggleStudy('{{ topic_name }}')"
-            style="width:52px;height:28px;background:{{ 'var(--green)' if is_active else '#ccc' }};border-radius:14px;cursor:pointer;position:relative;transition:background .3s;flex-shrink:0;"
-            id="study-toggle-{{ topic_name }}">
-            <div style="width:22px;height:22px;background:#fff;border-radius:50%;position:absolute;top:3px;left:{{ '27px' if is_active else '3px' }};transition:left .3s;box-shadow:0 1px 4px rgba(0,0,0,.2);"
-              id="study-knob-{{ topic_name }}"></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-
       <!-- 게시판 탭 -->
       <div class="tab-panel" id="tab-board">
-        <div style="margin-bottom:12px;">
-          <label class="flabel">새 게시판 만들기</label>
-          <div style="display:flex;gap:8px;">
-            <input type="text" id="newBoardTitle" placeholder="예) 미술 1차시 작품 전시" style="flex:1;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:9px;font-size:13px;outline:none;">
-            <button class="btn btn-orange" onclick="addBoard()" style="white-space:nowrap;">만들기</button>
-          </div>
-        </div>
-        <div id="boardListWrap">
-        {% for b in boards %}
-        <div id="bcard-{{ b.id }}" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:{{ '#e8f5e9' if b.open else '#f9f9f9' }};border-radius:12px;margin-bottom:8px;border:1.5px solid {{ '#a5d6a7' if b.open else '#e0e0e0' }};">
-          <div style="flex:1;">
-            <div style="font-weight:700;font-size:13px;color:var(--navy);">📌 {{ b.title }}</div>
-            <div style="font-size:11px;color:#888;margin-top:2px;">{{ b.created }} · <span id="bstatus-{{ b.id }}" style="color:{{ 'var(--green)' if b.open else '#aaa' }};">{{ '열림' if b.open else '닫힘' }}</span></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <a href="/board/{{ b.id }}" style="background:var(--navy);color:#fff;padding:5px 12px;border-radius:7px;font-size:12px;text-decoration:none;font-weight:700;">보기</a>
-            <div onclick="toggleBoardItem('{{ b.id }}')"
-              style="width:48px;height:26px;background:{{ 'var(--green)' if b.open else '#ccc' }};border-radius:13px;cursor:pointer;position:relative;transition:background .3s;flex-shrink:0;"
-              id="btoggle-{{ b.id }}">
-              <div style="width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:3px;left:{{ '25px' if b.open else '3px' }};transition:left .3s;"
-                id="bknob-{{ b.id }}"></div>
+        <!-- 게시판 열기/닫기 토글 -->
+        <div id="boardStatusCard" style="border-radius:12px;padding:16px;margin-bottom:12px;border:2px solid {% if board_config.open %}#a5d6a7{% else %}#e0e0e0{% endif %};background:{% if board_config.open %}#e8f5e9{% else %}#f9f9f9{% endif %};">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div>
+              <div id="boardStatusLabel" style="font-family:'Black Han Sans',sans-serif;font-size:15px;color:{% if board_config.open %}var(--green){% else %}#888{% endif %};">
+                {% if board_config.open %}📌 게시판 열림{% else %}🔒 게시판 닫힘{% endif %}
+              </div>
+              <div id="boardStatusDesc" style="font-size:11px;color:#888;margin-top:3px;">
+                {% if board_config.open %}학생들이 지금 게시판에 올릴 수 있어요{% else %}학생 화면에 게시판이 보이지 않아요{% endif %}
+              </div>
             </div>
-            <button onclick="deleteBoard('{{ b.id }}')" style="background:#ffebee;color:var(--red);border:1px solid #ef9a9a;padding:4px 9px;border-radius:7px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR';font-weight:700;">삭제</button>
+            <!-- 토글 스위치 -->
+            <div onclick="toggleBoard()" id="boardToggle"
+              style="width:56px;height:30px;background:{% if board_config.open %}var(--green){% else %}#ccc{% endif %};border-radius:15px;cursor:pointer;position:relative;transition:background .3s;flex-shrink:0;">
+              <div id="boardKnob"
+                style="width:24px;height:24px;background:#fff;border-radius:50%;position:absolute;top:3px;left:{% if board_config.open %}29px{% else %}3px{% endif %};transition:left .3s;box-shadow:0 1px 4px rgba(0,0,0,.2);"></div>
+            </div>
           </div>
+          <label style="font-size:11px;font-weight:700;color:#5c6bc0;margin-bottom:4px;display:block;">게시판 이름</label>
+          <input type="text" id="boardTitleInput" value="{{ board_config.title }}"
+            placeholder="예) 미술 게시판, 독서 게시판"
+            style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:9px;font-size:13px;outline:none;margin-bottom:6px;">
+          <p style="font-size:11px;color:#aaa;">이름 입력 후 토글 누르면 바로 반영돼요</p>
         </div>
-        {% endfor %}
-        </div>
-        <a href="/boards" style="display:block;text-align:center;background:#f0f4ff;color:var(--navy);padding:11px;border-radius:12px;font-family:'Black Han Sans',sans-serif;font-size:14px;text-decoration:none;margin-top:8px;">📌 게시판 전체 보기</a>
+        <a href="/board" style="display:block;text-align:center;background:var(--orange);color:#fff;padding:12px;border-radius:12px;font-family:'Black Han Sans',sans-serif;font-size:15px;text-decoration:none;letter-spacing:1px;margin-bottom:8px;">📌 게시판 바로가기 (관리)</a>
+        <p style="font-size:12px;color:#888;text-align:center;">게시물 확인, 삭제 등 관리는 위 버튼으로</p>
       </div>
+
     </div>
   </div>
 </div>

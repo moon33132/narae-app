@@ -95,24 +95,13 @@
   <a href="/wordbook" style="background:#FFD600;color:#0D47A1;border:none;padding:9px 18px;border-radius:10px;font-family:'Black Han Sans',sans-serif;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap;">공부하러 가기 →</a>
 </div>
 
-{% if false %}
-<div style="display:none";color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;">
+{% if board_config and board_config.open %}
+<div style="background:linear-gradient(135deg,#FF6F00,#FF8F00);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;">
   <div>
     <div style="font-family:'Black Han Sans',sans-serif;font-size:16px;letter-spacing:1px;">📌 {{ board_config.title }} 열렸어요!</div>
     <div style="font-size:12px;opacity:.9;margin-top:2px;">작품이나 의견을 올려보세요 👇</div>
   </div>
   <a href="/board" style="background:#fff;color:#FF6F00;padding:8px 16px;border-radius:10px;font-family:'Black Han Sans',sans-serif;font-size:13px;text-decoration:none;white-space:nowrap;">바로가기 →</a>
-</div>
-{% endif %}
-
-{% if notices %}
-<div style="background:#fff;border-bottom:2px solid #e3f2fd;padding:10px 16px;">
-  {% for n in notices[:3] %}
-  <div style="font-size:13px;color:var(--navy);padding:6px 0;border-bottom:{{ '1px solid #f0f0f0' if not loop.last else 'none' }};display:flex;gap:8px;align-items:flex-start;">
-    <span style="color:var(--sky);font-size:16px;flex-shrink:0;">📢</span>
-    <span>{{ n.content }}</span>
-  </div>
-  {% endfor %}
 </div>
 {% endif %}
 
