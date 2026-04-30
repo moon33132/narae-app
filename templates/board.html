@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ config.title }} – 나래반</title>
+<title>{{ board.title }} – 나래반</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -86,10 +86,10 @@
 <body>
 
 <div class="topbar">
-  <h1>📌 {{ config.title }}</h1>
+  <h1>📌 {{ board.title }}</h1>
   <div class="topbar-right">
     <span class="post-count">{{ posts|length }}개</span>
-    <a href="{{ '/teacher' if is_teacher else '/student' }}" class="back-btn">← 돌아가기</a>
+    <a href="/boards" class="back-btn">← 게시판 목록</a>
   </div>
 </div>
 
@@ -228,7 +228,7 @@ async function submitPost() {
   if (file) fd.append('image', file);
 
   try {
-    const res = await fetch('/board/post', { method: 'POST', body: fd });
+    const res = await fetch('/board/' + BOARD_ID + '/post', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.ok) {
       showToast('게시 완료!');
@@ -247,7 +247,7 @@ async function submitPost() {
 async function deletePost(postId) {
   if (!confirm('삭제할까요?')) return;
   try {
-    const res = await fetch('/board/delete/' + postId);
+    const res = await fetch('/board/' + BOARD_ID + '/delete/' + postId);
     const data = await res.json();
     if (data.ok) {
       const el = document.getElementById('post-' + postId);
@@ -255,7 +255,7 @@ async function deletePost(postId) {
       showToast('삭제됐어요');
     }
   } catch(e) {
-    location.href = '/board/delete/' + postId;
+    location.href = '/board/' + BOARD_ID + '/delete/' + postId;
   }
 }
 
@@ -271,6 +271,7 @@ function closeLightbox() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); closeLightbox(); }
 });
+const BOARD_ID = '{{ board.id }}';
 </script>
 </body>
 </html>
