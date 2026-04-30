@@ -95,12 +95,23 @@
   <a href="/wordbook" style="background:#FFD600;color:#0D47A1;border:none;padding:9px 18px;border-radius:10px;font-family:'Black Han Sans',sans-serif;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap;">공부하러 가기 →</a>
 </div>
 
+{% if board_config and board_config.open %}
+<div style="background:linear-gradient(135deg,#FF6F00,#FF8F00);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;">
+  <div>
+    <div style="font-family:'Black Han Sans',sans-serif;font-size:16px;letter-spacing:1px;">📌 {{ board_config.title }} 열렸어요!</div>
+    <div style="font-size:12px;opacity:.9;margin-top:2px;">작품이나 의견을 올려보세요 👇</div>
+  </div>
+  <a href="/board" style="background:#fff;color:#FF6F00;padding:8px 16px;border-radius:10px;font-family:'Black Han Sans',sans-serif;font-size:13px;text-decoration:none;white-space:nowrap;">바로가기 →</a>
+</div>
+{% endif %}
+
 {% if active_quizzes %}
 <div style="background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#fff;padding:14px 20px;text-align:center;animation:pulse 1.5s infinite;">
   <div style="font-family:'Black Han Sans',sans-serif;font-size:20px;letter-spacing:2px;">🎯 깜짝 퀴즈!</div>
   <div style="font-size:13px;margin-top:4px;opacity:.9;">선생님이 퀴즈를 냈어요! 아래에서 바로 풀어보세요 👇</div>
 </div>
-<style>@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.85;}}</style>
+<style>@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.85;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.7;}}</style>
 {% endif %}
 
 <div class="main">

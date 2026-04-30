@@ -720,6 +720,7 @@ def get_hw_items():
         return DEFAULT_HW_ITEMS
     return items
 def board_path():          return os.path.join(DATA_DIR, "board_posts.json")
+def board_config_path():   return os.path.join(DATA_DIR, "board_config.json")
 BOARD_UPLOAD_DIR = os.path.join(BASE_DIR, "board_uploads")
 os.makedirs(BOARD_UPLOAD_DIR, exist_ok=True)
 
@@ -993,13 +994,15 @@ def teacher_dashboard():
         w["avg_score"] = round(sum(scores)/len(scores)) if scores else "-"
     hw_items = get_hw_items()
     hw_today = load_json(homework_path(), {})
+    board_config = load_json(board_config_path(), {"open": False, "title": "게시판"})
     return render_template("teacher.html",
         att=att, checked=checked, absent=absent,
         quizzes=quizzes, exams=exams,
         word_tests=word_tests, shared_files=shared_files,
         uploads=uploads, today=today_str(),
         total=STUDENT_COUNT, registered=registered,
-        hw_items=hw_items, hw_today=hw_today)
+        hw_items=hw_items, hw_today=hw_today,
+        board_config=board_config)
 
 # ── 단어시험 만들기 ─────────────────────────────────
 @app.route("/teacher/word_test/add", methods=["POST"])
@@ -1323,9 +1326,24 @@ def homework_reset():
 def board():
     num = get_student_num()
     if not num and not is_teacher(): return redirect(url_for("index"))
+    config = load_json(board_config_path(), {"open": False, "title": "게시판"})
+    # 학생은 게시판 열려있을 때만 접근 가능
+    if not is_teacher() and not config.get("open"):
+        return redirect(url_for("student_dashboard"))
     posts = load_json(board_path(), [])
     return render_template("board.html",
-        posts=posts, num=num, is_teacher=is_teacher(), total=STUDENT_COUNT)
+        posts=posts, num=num, is_teacher=is_teacher(),
+        total=STUDENT_COUNT, config=config)
+
+@app.route("/teacher/board/toggle", methods=["POST"])
+def board_toggle():
+    if not is_teacher(): return jsonify({"ok": False})
+    data = request.get_json()
+    config = load_json(board_config_path(), {"open": False, "title": "게시판"})
+    config["open"]  = data.get("open", False)
+    config["title"] = data.get("title", "게시판").strip() or "게시판"
+    save_json(board_config_path(), config)
+    return jsonify({"ok": True, "config": config})
 
 @app.route("/board/post", methods=["POST"])
 def board_post():
