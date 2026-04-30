@@ -821,10 +821,14 @@ def student_dashboard():
     shared_files   = sorted(os.listdir(SHARE_DIR))
     submitted_exams = {e["id"] for e in exams if str(num) in load_json(exam_answers_path(e["id"]),{})}
     submitted_wt    = {w["id"] for w in word_tests if str(num) in load_json(word_answers_path(w["id"]),{})}
+    hw_items       = get_hw_items()
+    hw_done        = load_json(homework_path(), {}).get(str(num), [])
+    board_config   = load_json(board_config_path(), {"open": False, "title": "게시판"})
     return render_template("student.html", num=num,
         active_quizzes=quizzes, active_exams=active_exams,
         active_word_tests=active_wt, submitted_exams=submitted_exams,
-        submitted_wt=submitted_wt, shared_files=shared_files, today=today_str())
+        submitted_wt=submitted_wt, shared_files=shared_files, today=today_str(),
+        hw_items=hw_items, hw_done=hw_done, board_config=board_config)
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
