@@ -315,6 +315,36 @@
         </div>{% endfor %}{% endif %}
       </div>
 
+      <!-- 게시판 탭 -->
+      <div class="tab-panel" id="tab-board">
+        <!-- 게시판 열기/닫기 토글 -->
+        <div id="boardStatusCard" style="border-radius:12px;padding:16px;margin-bottom:12px;border:2px solid {% if board_config.open %}#a5d6a7{% else %}#e0e0e0{% endif %};background:{% if board_config.open %}#e8f5e9{% else %}#f9f9f9{% endif %};">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div>
+              <div id="boardStatusLabel" style="font-family:'Black Han Sans',sans-serif;font-size:15px;color:{% if board_config.open %}var(--green){% else %}#888{% endif %};">
+                {% if board_config.open %}📌 게시판 열림{% else %}🔒 게시판 닫힘{% endif %}
+              </div>
+              <div id="boardStatusDesc" style="font-size:11px;color:#888;margin-top:3px;">
+                {% if board_config.open %}학생들이 지금 게시판에 올릴 수 있어요{% else %}학생 화면에 게시판이 보이지 않아요{% endif %}
+              </div>
+            </div>
+            <!-- 토글 스위치 -->
+            <div onclick="toggleBoard()" id="boardToggle"
+              style="width:56px;height:30px;background:{% if board_config.open %}var(--green){% else %}#ccc{% endif %};border-radius:15px;cursor:pointer;position:relative;transition:background .3s;flex-shrink:0;">
+              <div id="boardKnob"
+                style="width:24px;height:24px;background:#fff;border-radius:50%;position:absolute;top:3px;left:{% if board_config.open %}29px{% else %}3px{% endif %};transition:left .3s;box-shadow:0 1px 4px rgba(0,0,0,.2);"></div>
+            </div>
+          </div>
+          <label style="font-size:11px;font-weight:700;color:#5c6bc0;margin-bottom:4px;display:block;">게시판 이름</label>
+          <input type="text" id="boardTitleInput" value="{{ board_config.title }}"
+            placeholder="예) 미술 게시판, 독서 게시판"
+            style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:9px;font-size:13px;outline:none;margin-bottom:6px;">
+          <p style="font-size:11px;color:#aaa;">이름 입력 후 토글 누르면 바로 반영돼요</p>
+        </div>
+        <a href="/board" style="display:block;text-align:center;background:var(--orange);color:#fff;padding:12px;border-radius:12px;font-family:'Black Han Sans',sans-serif;font-size:15px;text-decoration:none;letter-spacing:1px;margin-bottom:8px;">📌 게시판 바로가기 (관리)</a>
+        <p style="font-size:12px;color:#888;text-align:center;">게시물 확인, 삭제 등 관리는 위 버튼으로</p>
+      </div>
+
     </div>
   </div>
 </div>
@@ -355,6 +385,44 @@ function onQQType(sel,n){
   else{extra.innerHTML='';ansRow.style.display='flex';ansInput.placeholder='정답 (빈칸이면 수동 확인)';}
 }
 addExamQ();addQuizQ();
+
+// ── 게시판 토글 ──────────────────────────────────────
+let boardOpen = {{ 'true' if board_config.open else 'false' }};
+
+async function toggleBoard() {
+  boardOpen = !boardOpen;
+  const title = document.getElementById('boardTitleInput').value.trim() || '게시판';
+  const res = await fetch('/teacher/board/toggle', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({open: boardOpen, title: title})
+  });
+  const data = await res.json();
+  if (data.ok) {
+    const toggle = document.getElementById('boardToggle');
+    const knob   = document.getElementById('boardKnob');
+    const card   = document.getElementById('boardStatusCard');
+    const label  = document.getElementById('boardStatusLabel');
+    const desc   = document.getElementById('boardStatusDesc');
+    if (boardOpen) {
+      toggle.style.background = 'var(--green)';
+      knob.style.left = '29px';
+      card.style.background = '#e8f5e9';
+      card.style.borderColor = '#a5d6a7';
+      label.style.color = 'var(--green)';
+      label.textContent = '📌 게시판 열림';
+      desc.textContent = '학생들이 지금 게시판에 올릴 수 있어요';
+    } else {
+      toggle.style.background = '#ccc';
+      knob.style.left = '3px';
+      card.style.background = '#f9f9f9';
+      card.style.borderColor = '#e0e0e0';
+      label.style.color = '#888';
+      label.textContent = '🔒 게시판 닫힘';
+      desc.textContent = '학생 화면에 게시판이 보이지 않아요';
+    }
+  }
+}
 </script>
 </body>
 </html>
