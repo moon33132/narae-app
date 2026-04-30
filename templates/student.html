@@ -119,6 +119,7 @@
   <!-- 숙제 체크 (항상 표시) -->
   <div class="section">
     <div class="section-title">📚 오늘의 숙제</div>
+    {% if hw_items %}
     <ul class="hw-list">
       {% for item in hw_items %}
       {% set is_done = item.id in hw_done %}
@@ -129,6 +130,25 @@
       </li>
       {% endfor %}
     </ul>
+    {% else %}
+    <ul class="hw-list">
+      <li class="hw-item" id="hw-hw_1" onclick="toggleHw('hw_1')">
+        <div class="hw-check"></div>
+        <span class="hw-name">수학 숙제</span>
+        <span style="font-size:12px;color:#aaa;">미완료</span>
+      </li>
+      <li class="hw-item" id="hw-hw_2" onclick="toggleHw('hw_2')">
+        <div class="hw-check"></div>
+        <span class="hw-name">국어 숙제</span>
+        <span style="font-size:12px;color:#aaa;">미완료</span>
+      </li>
+      <li class="hw-item" id="hw-hw_3" onclick="toggleHw('hw_3')">
+        <div class="hw-check"></div>
+        <span class="hw-name">알림장</span>
+        <span style="font-size:12px;color:#aaa;">미완료</span>
+      </li>
+    </ul>
+    {% endif %}
   </div>
 
   <!-- 단어시험 -->

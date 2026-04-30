@@ -714,10 +714,15 @@ DEFAULT_HW_ITEMS = [
 ]
 
 def get_hw_items():
-    items = load_json(homework_items_path(), None)
-    if items is None:
+    items = load_json(homework_items_path(), [])
+    if not items:
+        # 파일 없거나 비어있으면 기본값 저장 후 반환
         save_json(homework_items_path(), DEFAULT_HW_ITEMS)
-        return DEFAULT_HW_ITEMS
+        return list(DEFAULT_HW_ITEMS)
+    # id가 없는 항목 보정 (구버전 데이터 호환)
+    for i, item in enumerate(items):
+        if "id" not in item:
+            item["id"] = f"hw_{i+1}"
     return items
 def board_path():          return os.path.join(DATA_DIR, "board_posts.json")
 def board_config_path():   return os.path.join(DATA_DIR, "board_config.json")
@@ -1306,10 +1311,10 @@ def homework_save():
     # 기존 id 유지하면서 이름만 업데이트
     current = get_hw_items()
     for i, item in enumerate(current):
-        if i < len(items):
-            item["name"] = items[i].get("name", item["name"])
+        if i < len(items) and items[i].get("name","").strip():
+            item["name"] = items[i]["name"].strip()
     save_json(homework_items_path(), current)
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "items": current})
 
 @app.route("/teacher/homework/reset", methods=["POST"])
 def homework_reset():
