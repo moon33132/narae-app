@@ -726,20 +726,6 @@ def get_hw_items():
     return items
 def board_path():          return os.path.join(DATA_DIR, "board_posts.json")
 def board_config_path():   return os.path.join(DATA_DIR, "board_config.json")
-
-# 게시판 상태 메모리 캐시 (Railway 파일시스템 리셋 대응)
-_board_config_cache = None
-
-def get_board_config():
-    global _board_config_cache
-    if _board_config_cache is None:
-        _board_config_cache = load_json(board_config_path(), {"open": True, "title": "게시판"})
-    return _board_config_cache
-
-def set_board_config(config):
-    global _board_config_cache
-    _board_config_cache = config
-    save_json(board_config_path(), config)
 BOARD_UPLOAD_DIR = os.path.join(BASE_DIR, "board_uploads")
 os.makedirs(BOARD_UPLOAD_DIR, exist_ok=True)
 
@@ -837,7 +823,7 @@ def student_dashboard():
     submitted_wt    = {w["id"] for w in word_tests if str(num) in load_json(word_answers_path(w["id"]),{})}
     hw_items       = get_hw_items()
     hw_done        = load_json(homework_path(), {}).get(str(num), [])
-    board_config   = get_board_config()
+    board_config   = load_json(board_config_path(), {"open": False, "title": "게시판"})
     return render_template("student.html", num=num,
         active_quizzes=quizzes, active_exams=active_exams,
         active_word_tests=active_wt, submitted_exams=submitted_exams,
@@ -1017,7 +1003,7 @@ def teacher_dashboard():
         w["avg_score"] = round(sum(scores)/len(scores)) if scores else "-"
     hw_items = get_hw_items()
     hw_today = load_json(homework_path(), {})
-    board_config = get_board_config()
+    board_config = load_json(board_config_path(), {"open": False, "title": "게시판"})
     return render_template("teacher.html",
         att=att, checked=checked, absent=absent,
         quizzes=quizzes, exams=exams,
@@ -1349,7 +1335,7 @@ def homework_reset():
 def board():
     num = get_student_num()
     if not num and not is_teacher(): return redirect(url_for("index"))
-    config = get_board_config()
+    config = load_json(board_config_path(), {"open": False, "title": "게시판"})
     # 학생은 게시판 열려있을 때만 접근 가능
     if not is_teacher() and not config.get("open"):
         return redirect(url_for("student_dashboard"))
@@ -1362,10 +1348,10 @@ def board():
 def board_toggle():
     if not is_teacher(): return jsonify({"ok": False})
     data = request.get_json()
-    config = get_board_config()
+    config = load_json(board_config_path(), {"open": False, "title": "게시판"})
     config["open"]  = data.get("open", False)
     config["title"] = data.get("title", "게시판").strip() or "게시판"
-    set_board_config(config)
+    save_json(board_config_path(), config)
     return jsonify({"ok": True, "config": config})
 
 @app.route("/board/post", methods=["POST"])
@@ -1417,6 +1403,8 @@ def board_delete(post_id):
                 continue
         new_posts.append(p)
     save_json(board_path(), new_posts)
+    if is_teacher():
+        return redirect(url_for("board"))
     return jsonify({"ok": True})
 
 if __name__ == "__main__":

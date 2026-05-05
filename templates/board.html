@@ -3,172 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ config.title }} – 나래반</title>
+<title>나래반 게시판</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  :root{--navy:#0D47A1;--sky:#4FC3F7;--green:#43A047;--red:#E53935;--orange:#FF6F00;--purple:#7B1FA2;--yellow:#FFD600;--bg:#f0f4ff;}
-  body{font-family:'Noto Sans KR',sans-serif;background:#e8edf8;min-height:100vh;}
+  :root{--navy:#0D47A1;--sky:#4FC3F7;--green:#43A047;--red:#E53935;--bg:#E3F2FD;--yellow:#FFD600;--orange:#FF6F00;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);min-height:100vh;}
+  .topbar{background:var(--navy);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .topbar h1{font-family:'Black Han Sans';font-size:18px;}
+  .back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:5px 12px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;font-family:'Noto Sans KR';}
+  .main{max-width:680px;margin:0 auto;padding:16px;}
 
-  /* 상단바 */
-  .topbar{background:var(--navy);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
-  .topbar h1{font-family:'Black Han Sans';font-size:18px;display:flex;align-items:center;gap:8px;}
-  .topbar-right{display:flex;align-items:center;gap:10px;}
-  .back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;font-family:'Noto Sans KR';}
-  .back-btn:hover{background:rgba(255,255,255,.28);}
-  .post-count{font-size:12px;opacity:.7;}
-
-  /* 글쓰기 버튼 (학생용 FAB) */
-  .fab{position:fixed;bottom:24px;right:24px;z-index:300;background:var(--orange);color:#fff;border:none;width:60px;height:60px;border-radius:50%;font-size:28px;cursor:pointer;box-shadow:0 4px 20px rgba(255,111,0,.5);transition:all .2s;display:flex;align-items:center;justify-content:center;}
-  .fab:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(255,111,0,.6);}
-
-  /* 글쓰기 모달 */
-  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:flex-end;justify-content:center;}
-  .modal-bg.show{display:flex;}
-  .modal{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:600px;animation:slideUp .3s ease;}
-  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
-  .modal-title{font-family:'Black Han Sans';font-size:18px;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
-  .modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:#aaa;padding:0;}
-  .modal-close:hover{color:var(--red);}
-  .my-num-badge{background:var(--navy);color:#fff;font-family:'Black Han Sans';font-size:13px;padding:4px 14px;border-radius:20px;margin-bottom:14px;display:inline-block;}
-  textarea{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:12px;font-family:'Noto Sans KR';font-size:15px;outline:none;resize:none;min-height:90px;margin-bottom:12px;}
+  /* 글쓰기 카드 */
+  .write-card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 2px 12px rgba(13,71,161,.1);}
+  .write-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .my-badge{background:var(--navy);color:#fff;font-family:'Black Han Sans';font-size:14px;padding:5px 14px;border-radius:20px;}
+  .write-header span{font-size:13px;color:#888;}
+  textarea{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:12px;font-family:'Noto Sans KR';font-size:14px;outline:none;resize:none;min-height:80px;margin-bottom:10px;}
   textarea:focus{border-color:var(--sky);}
 
   /* 이미지 업로드 */
-  .img-upload-zone{border:2px dashed #90caf9;border-radius:12px;padding:18px;text-align:center;cursor:pointer;background:#f0f8ff;margin-bottom:14px;transition:all .2s;position:relative;}
-  .img-upload-zone:hover{border-color:var(--sky);background:#e1f5fe;}
-  .img-upload-zone input{display:none;}
-  .img-preview-wrap{position:relative;display:none;margin-bottom:0;}
-  .img-preview-wrap img{width:100%;border-radius:10px;max-height:240px;object-fit:contain;}
-  .img-remove{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-  .upload-hint{pointer-events:none;}
-  .submit-btn{width:100%;padding:14px;border:none;border-radius:14px;background:var(--orange);color:#fff;font-family:'Black Han Sans';font-size:17px;cursor:pointer;letter-spacing:1px;transition:all .2s;}
-  .submit-btn:hover{filter:brightness(1.1);}
+  .img-upload-area{border:2px dashed #90caf9;border-radius:12px;padding:16px;text-align:center;cursor:pointer;background:#f0f8ff;margin-bottom:10px;transition:all .2s;}
+  .img-upload-area:hover{border-color:var(--sky);background:#e1f5fe;}
+  .img-upload-area input{display:none;}
+  .img-preview{width:100%;border-radius:10px;margin-bottom:10px;max-height:280px;object-fit:contain;display:none;}
+  .submit-btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--navy);color:#fff;font-family:'Black Han Sans';font-size:16px;cursor:pointer;letter-spacing:1px;}
+  .submit-btn:hover{background:#1565C0;}
   .submit-btn:disabled{background:#ccc;cursor:default;}
 
-  /* 패들릿 그리드 */
-  .board-grid{columns:2;gap:14px;padding:14px;max-width:960px;margin:0 auto;}
-  @media(min-width:700px){.board-grid{columns:3;}}
-  @media(min-width:1000px){.board-grid{columns:4;}}
+  /* 게시글 */
+  .post-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(13,71,161,.07);}
+  .post-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .post-num{background:var(--sky);color:var(--navy);font-family:'Black Han Sans';font-size:13px;padding:4px 12px;border-radius:20px;}
+  .post-time{font-size:11px;color:#aaa;}
+  .post-img{width:100%;border-radius:10px;margin-bottom:10px;max-height:360px;object-fit:contain;cursor:pointer;}
+  .post-content{font-size:14px;color:#333;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+  .post-footer{margin-top:10px;display:flex;justify-content:flex-end;gap:6px;}
+  .del-btn{background:#ffebee;color:var(--red);border:1px solid #ef9a9a;padding:4px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR';font-weight:700;}
+  .del-btn:hover{background:#ffcdd2;}
 
-  /* 포스트 카드 */
-  .post-card{break-inside:avoid;background:#fff;border-radius:16px;margin-bottom:14px;box-shadow:0 2px 12px rgba(13,71,161,.1);overflow:hidden;transition:transform .15s,box-shadow .15s;cursor:default;}
-  .post-card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(13,71,161,.15);}
-  .post-img{width:100%;display:block;cursor:pointer;}
-  .post-body{padding:12px 14px 10px;}
-  .post-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-  .post-num-badge{background:var(--sky);color:var(--navy);font-family:'Black Han Sans';font-size:11px;padding:3px 10px;border-radius:20px;}
-  .post-time{font-size:10px;color:#aaa;}
-  .post-content{font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
-  .post-del{background:none;border:none;color:#ddd;font-size:16px;cursor:pointer;padding:2px 4px;margin-left:4px;line-height:1;}
-  .post-del:hover{color:var(--red);}
-
-  /* 빈 상태 */
-  .empty-state{text-align:center;padding:60px 20px;color:#aaa;}
-  .empty-state .big-emoji{font-size:56px;display:block;margin-bottom:14px;}
-  .empty-state p{font-size:15px;line-height:1.8;}
+  .empty-board{text-align:center;padding:48px 16px;color:#aaa;}
+  .empty-board .emoji{font-size:48px;display:block;margin-bottom:12px;}
 
   /* 이미지 전체화면 */
-  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;display:none;align-items:center;justify-content:center;}
-  .lightbox.show{display:flex;}
-  .lightbox img{max-width:95vw;max-height:92vh;border-radius:8px;object-fit:contain;}
-  .lightbox-close{position:fixed;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:26px;cursor:pointer;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;}
+  .img-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:999;display:none;}
+  .img-modal.show{display:flex;}
+  .img-modal img{max-width:95vw;max-height:90vh;border-radius:10px;}
+  .img-modal-close{position:fixed;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;cursor:pointer;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;}
 
-  /* 토스트 */
-  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:11px 22px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;z-index:9999;white-space:nowrap;pointer-events:none;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;z-index:9999;white-space:nowrap;}
   .toast.show{opacity:1;}
-
-  /* 선생님 삭제 버튼 */
-  .teacher-del{background:#ffebee;color:var(--red);border:1px solid #ef9a9a;padding:3px 10px;border-radius:7px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR';font-weight:700;}
-  .teacher-del:hover{background:#ffcdd2;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>📌 {{ config.title }}</h1>
-  <div class="topbar-right">
-    <span class="post-count">{{ posts|length }}개</span>
-    <a href="{{ '/teacher' if is_teacher else '/student' }}" class="back-btn">← 돌아가기</a>
-  </div>
+  <h1>📌 나래반 게시판</h1>
+  <a href="{{ '/teacher' if is_teacher else '/student' }}" class="back-btn">← 돌아가기</a>
 </div>
 
-<!-- 게시물 그리드 -->
-<div class="board-grid" id="boardGrid">
+<div class="main">
+
+  <!-- 글쓰기 (학생만) -->
+  {% if not is_teacher %}
+  <div class="write-card">
+    <div class="write-header">
+      <span class="my-badge">{{ num }}번</span>
+      <span>작품이나 생각을 올려보세요!</span>
+    </div>
+    <textarea id="writeContent" placeholder="내용을 입력하세요 (선택, 사진만 올려도 돼요)" rows="3"></textarea>
+
+    <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
+      <input type="file" id="imgInput" accept="image/*" capture="environment" onchange="previewImg(this)">
+      <img id="imgPreview" class="img-preview">
+      <div id="uploadHint">
+        <div style="font-size:28px;">📷</div>
+        <div style="font-size:13px;color:#5c6bc0;margin-top:6px;">사진 찍거나 파일 선택</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">카메라로 찍기 / 저장된 사진 선택</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitPost()">게시하기 📌</button>
+  </div>
+  {% endif %}
+
+  <!-- 게시글 목록 -->
   {% if posts %}
     {% for post in posts %}
     <div class="post-card" id="post-{{ post.id }}">
+      <div class="post-header">
+        <span class="post-num">{{ post.num }}번</span>
+        <span class="post-time">{{ post.created }}</span>
+      </div>
       {% if post.image_url %}
-      <img class="post-img" src="{{ post.image_url }}" onclick="openLightbox('{{ post.image_url }}')" alt="게시물 이미지" loading="lazy">
+      <img class="post-img" src="{{ post.image_url }}" onclick="openModal('{{ post.image_url }}')" alt="게시물 이미지">
       {% endif %}
-      <div class="post-body">
-        <div class="post-header">
-          <span class="post-num-badge">{{ post.num }}번</span>
-          <div style="display:flex;align-items:center;gap:4px;">
-            <span class="post-time">{{ post.created }}</span>
-            {% if is_teacher %}
-            <button class="teacher-del" onclick="deletePost('{{ post.id }}')">삭제</button>
-            {% elif post.num == num %}
-            <button class="post-del" onclick="deletePost('{{ post.id }}')" title="삭제">✕</button>
-            {% endif %}
-          </div>
-        </div>
-        {% if post.content %}
-        <div class="post-content">{{ post.content }}</div>
+      {% if post.content %}
+      <div class="post-content">{{ post.content }}</div>
+      {% endif %}
+      <div class="post-footer">
+        {% if is_teacher or post.num == num %}
+        <button class="del-btn" onclick="deletePost('{{ post.id }}', {{ 'true' if is_teacher else 'false' }})">삭제</button>
         {% endif %}
       </div>
     </div>
     {% endfor %}
   {% else %}
-    <div class="empty-state" style="column-span:all;">
-      <span class="big-emoji">📭</span>
-      <p>아직 아무도 올리지 않았어요.<br>
-      {% if not is_teacher %}
-      아래 <strong style="color:var(--orange);">+ 버튼</strong>을 눌러 첫 번째로 올려보세요!
-      {% endif %}
-      </p>
+    <div class="empty-board">
+      <span class="emoji">📭</span>
+      아직 게시물이 없어요.<br>첫 번째로 올려보세요!
     </div>
   {% endif %}
+
 </div>
 
-<!-- 학생용 글쓰기 FAB 버튼 -->
-{% if not is_teacher %}
-<button class="fab" onclick="openModal()" title="글 올리기">＋</button>
-{% endif %}
-
-<!-- 글쓰기 모달 -->
-{% if not is_teacher %}
-<div class="modal-bg" id="modalBg" onclick="closeModalBg(event)">
-  <div class="modal">
-    <div class="modal-title">
-      <span>✏️ 게시물 올리기</span>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <span class="my-num-badge">{{ num }}번</span>
-    <textarea id="writeContent" placeholder="하고 싶은 말을 써보세요 (선택사항)" rows="3"></textarea>
-
-    <div class="img-upload-zone" id="uploadZone" onclick="document.getElementById('imgInput').click()">
-      <input type="file" id="imgInput" accept="image/*" capture="environment" onchange="previewImg(this)">
-      <div class="img-preview-wrap" id="previewWrap">
-        <img id="imgPreview" src="" alt="">
-        <button class="img-remove" onclick="event.stopPropagation();removeImg()" title="사진 제거">✕</button>
-      </div>
-      <div class="upload-hint" id="uploadHint">
-        <div style="font-size:32px;">📷</div>
-        <div style="font-size:14px;color:#5c6bc0;margin-top:6px;font-weight:700;">사진 추가</div>
-        <div style="font-size:11px;color:#aaa;margin-top:3px;">카메라 촬영 또는 저장된 사진 선택</div>
-      </div>
-    </div>
-
-    <button class="submit-btn" id="submitBtn" onclick="submitPost()">📌 게시하기</button>
-  </div>
-</div>
-{% endif %}
-
-<!-- 이미지 전체화면 -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightboxImg" src="" alt="">
+<!-- 이미지 전체화면 모달 -->
+<div class="img-modal" id="imgModal" onclick="closeModal()">
+  <button class="img-modal-close" onclick="closeModal()">✕</button>
+  <img id="modalImg" src="" alt="">
 </div>
 
 <div class="toast" id="toast"></div>
@@ -182,34 +134,17 @@ function showToast(msg, ok=true) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function openModal() {
-  document.getElementById('modalBg').classList.add('show');
-  setTimeout(() => document.getElementById('writeContent').focus(), 300);
-}
-function closeModal() {
-  document.getElementById('modalBg').classList.remove('show');
-}
-function closeModalBg(e) {
-  if (e.target === document.getElementById('modalBg')) closeModal();
-}
-
 function previewImg(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('imgPreview').src = e.target.result;
-    document.getElementById('previewWrap').style.display = 'block';
+    const preview = document.getElementById('imgPreview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
     document.getElementById('uploadHint').style.display = 'none';
   };
   reader.readAsDataURL(file);
-}
-
-function removeImg() {
-  document.getElementById('imgInput').value = '';
-  document.getElementById('imgPreview').src = '';
-  document.getElementById('previewWrap').style.display = 'none';
-  document.getElementById('uploadHint').style.display = 'block';
 }
 
 async function submitPost() {
@@ -227,50 +162,39 @@ async function submitPost() {
   fd.append('content', content);
   if (file) fd.append('image', file);
 
-  try {
-    const res = await fetch('/board/post', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.ok) {
-      showToast('게시 완료!');
-      closeModal();
-      setTimeout(() => location.reload(), 600);
-    } else {
-      showToast(data.msg, false);
-      btn.disabled = false; btn.textContent = '📌 게시하기';
-    }
-  } catch(e) {
-    showToast('오류가 발생했어요', false);
-    btn.disabled = false; btn.textContent = '📌 게시하기';
+  const res = await fetch('/board/post', { method: 'POST', body: fd });
+  const data = await res.json();
+  showToast(data.msg, data.ok);
+  if (data.ok) {
+    setTimeout(() => location.reload(), 800);
+  } else {
+    btn.disabled = false;
+    btn.textContent = '게시하기 📌';
   }
 }
 
-async function deletePost(postId) {
+async function deletePost(postId, isTeacher) {
   if (!confirm('삭제할까요?')) return;
-  try {
+  if (isTeacher) {
+    location.href = '/board/delete/' + postId;
+  } else {
     const res = await fetch('/board/delete/' + postId);
     const data = await res.json();
+    showToast(data.msg, data.ok);
     if (data.ok) {
       const el = document.getElementById('post-' + postId);
-      if (el) { el.style.opacity='0'; el.style.transform='scale(.9)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }
-      showToast('삭제됐어요');
+      if (el) el.remove();
     }
-  } catch(e) {
-    location.href = '/board/delete/' + postId;
   }
 }
 
-function openLightbox(src) {
-  document.getElementById('lightboxImg').src = src;
-  document.getElementById('lightbox').classList.add('show');
+function openModal(src) {
+  document.getElementById('modalImg').src = src;
+  document.getElementById('imgModal').classList.add('show');
 }
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('show');
+function closeModal() {
+  document.getElementById('imgModal').classList.remove('show');
 }
-
-// ESC 닫기
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeLightbox(); }
-});
 </script>
 </body>
 </html>
